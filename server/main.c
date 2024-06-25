@@ -5,14 +5,15 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "tc2.h"
 #include "version.h"
 
 const char *argp_program_version = "tinyc2" SERVER_VERSION;
 static char doc[] = "A tiny C2 Framework";
 static char args_doc[] = "";
 static struct argp_option options[] = { 
-    { "server", 's', 'SERVER', 0, "IP of the server. Default: 0.0.0.0"},
-    { "port", 'p', 'PORT', 0, "Port of the server. Default: 8083"},
+    { "server", 's', "SERVER", 0, "IP of the server. Default: 0.0.0.0"},
+    { "port", 'p', "PORT", 0, "Port of the server. Default: 8083"},
     { 0 } 
 };
 
@@ -69,6 +70,10 @@ int main(int argc, char* argv[]) {
     }
 
     printf("Parsed successfully\n");
+
+    int res2 = test();
+
+    printf("%d\n", res2);
 
     return 0;
 }
