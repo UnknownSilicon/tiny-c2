@@ -8,7 +8,7 @@ project(tiny_c2
 set(CMAKE_BUILD_TYPE Debug)
 
 add_subdirectory(server)
-#add_subdirectory(linux-client)
+add_subdirectory(linux-client)
 add_subdirectory(c2-lib)
 
 
