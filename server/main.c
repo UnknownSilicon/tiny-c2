@@ -1,10 +1,12 @@
 #include <argp.h>
 #include <errno.h>
 #include <limits.h>
+#include <netdb.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "server.h"
 #include "tc2.h"
 #include "version.h"
 
@@ -74,6 +76,10 @@ int main(int argc, char* argv[]) {
     int res2 = test();
 
     printf("%d\n", res2);
+
+    struct hostent* hostname = gethostbyname(arguments.ip);
+
+    start_server((in_addr_t*) hostname->h_addr_list[0], arguments.port);
 
     return 0;
 }
