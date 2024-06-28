@@ -11,6 +11,7 @@
 
 void start_server(in_addr_t* host, short port) {
     struct sockaddr_in sockaddr;
+    int pid;
 
     int serv_sock = socket(AF_INET, SOCK_STREAM, 0);
     sockaddr.sin_family = AF_INET;
@@ -31,7 +32,19 @@ void start_server(in_addr_t* host, short port) {
 
         printf("Connection acquired. Client Addr: %s\n", inet_ntoa(client_sockaddr.sin_addr));
 
-        // Here, fork
+        if ((pid = fork()) == -1) {
+            // Fork failed
+            close(connfs);
+            continue;
+        } else if(pid > 0) {
+            // Parent process
+            // Potentially use this to count active child processes
+            // Useful to ensure not too many clients establish connections at once
+            // And DOS the server
+            close(connfs);
+            continue;
+        }
+        // Child process
 
         struct tc2_msg_preamble preamble;
 
