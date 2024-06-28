@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include "aes.h"
 #include "messages.h"
 #include "server.h"
 
@@ -82,6 +83,7 @@ void start_server(in_addr_t* host, short port) {
             }
         }
 
+        // Read init message, check key
         struct tc2_msg_init init_msg;
 
         read(connfs, &init_msg, preamble.len);
