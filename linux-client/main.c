@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
     connect(sock, (struct sockaddr *)&sockaddr, sizeof(sockaddr));
 
     struct tc2_msg_init init_msg;
-    strncpy(init_msg.key, "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", 64);
+    strncpy(init_msg.key, "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\x00", 64);
     
 
     struct tc2_msg_preamble preamble;
