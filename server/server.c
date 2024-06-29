@@ -13,6 +13,7 @@
 #include "aes.h"
 #include "messages.h"
 #include "server.h"
+#include "util.h"
 
 void handle_sigchld(int signum) {
     wait(NULL);
@@ -53,8 +54,10 @@ void start_server(in_addr_t* host, short port) {
 
         // Set socket timeout, at least during initialization
         // This prevents clients from completely locking up the init process
-        setsockopt(connfs, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
-        setsockopt(connfs, SOL_SOCKET, SO_SNDTIMEO, (const char*)&tv, sizeof tv);
+        int to_res = set_timeout(connfs, &tv);
+        if (to_res != 0) {
+            printf("Unable to set socket timeout %d\n", to_res);
+        }
 
         printf("Connection acquired. Client Addr: %s\n", inet_ntoa(client_sockaddr.sin_addr));
 
@@ -66,7 +69,12 @@ void start_server(in_addr_t* host, short port) {
 
         struct tc2_msg_preamble preamble;
 
-        read(connfs, &preamble, sizeof(preamble));
+        int64_t bytes_read = read(connfs, &preamble, sizeof(preamble));
+        if ((bytes_read == -1) || bytes_read < sizeof(preamble)) {
+            printf("Timeout while reading preamble\n");
+            close(connfs);
+            continue;
+        }
 
         printf("Received preamble. Type %d\n", preamble.type);
 
@@ -87,7 +95,12 @@ void start_server(in_addr_t* host, short port) {
         // Read init message, check key
         struct tc2_msg_init init_msg;
 
-        read(connfs, &init_msg, preamble.len);
+        bytes_read = read(connfs, &init_msg, preamble.len);
+        if ((bytes_read == -1) || bytes_read < preamble.len) {
+            printf("Timeout while reading init\n");
+            close(connfs);
+            continue;
+        }
 
         printf("Got data: %s\n", init_msg.key);
 
@@ -134,8 +147,10 @@ void start_server(in_addr_t* host, short port) {
 
         // At this point, the client has authenticated and we're in the child process,
         // so we can disable timeout.
-        setsockopt(connfs, SOL_SOCKET, SO_RCVTIMEO, (const char*)&no_timeout, sizeof no_timeout);
-        setsockopt(connfs, SOL_SOCKET, SO_SNDTIMEO, (const char*)&no_timeout, sizeof no_timeout);
+        to_res = set_timeout(connfs, &no_timeout);
+        if (to_res != 0) {
+            printf("Unable to set socket timeout %d\n", to_res);
+        }
 
         fflush(stdout);
 
