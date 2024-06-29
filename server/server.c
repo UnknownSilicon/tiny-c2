@@ -54,6 +54,7 @@ void start_server(in_addr_t* host, short port) {
         // Set socket timeout, at least during initialization
         // This prevents clients from completely locking up the init process
         setsockopt(connfs, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+        setsockopt(connfs, SOL_SOCKET, SO_SNDTIMEO, (const char*)&tv, sizeof tv);
 
         printf("Connection acquired. Client Addr: %s\n", inet_ntoa(client_sockaddr.sin_addr));
 
@@ -134,6 +135,7 @@ void start_server(in_addr_t* host, short port) {
         // At this point, the client has authenticated and we're in the child process,
         // so we can disable timeout.
         setsockopt(connfs, SOL_SOCKET, SO_RCVTIMEO, (const char*)&no_timeout, sizeof no_timeout);
+        setsockopt(connfs, SOL_SOCKET, SO_SNDTIMEO, (const char*)&no_timeout, sizeof no_timeout);
 
         fflush(stdout);
 
