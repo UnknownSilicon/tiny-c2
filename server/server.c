@@ -90,7 +90,7 @@ void start_server(in_addr_t* host, short port) {
 
         printf("Got data: %s\n", init_msg.key);
 
-        char* expected_key = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\x00";
+        char* expected_key = AES_KEY;
 
         fflush(stdout);
 

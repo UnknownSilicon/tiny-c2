@@ -3,6 +3,8 @@
 #ifndef _AES_H_
 #define _AES_H_
 
+#define AES_KEY "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\x00"
+
 #include <stdint.h>
 #include <stddef.h>
 
