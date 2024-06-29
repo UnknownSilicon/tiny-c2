@@ -35,6 +35,7 @@ NOTE:   String length must be evenly divisible by 16byte (str_len % 16 == 0)
 /*****************************************************************************/
 /* Includes:                                                                 */
 /*****************************************************************************/
+#include <assert.h>
 #include <string.h> // CBC mode, for memset
 #include "aes.h"
 
@@ -501,6 +502,8 @@ static void XorWithIv(uint8_t* buf, const uint8_t* Iv)
 void AES_CBC_encrypt_buffer(struct AES_ctx *ctx, uint8_t* buf, size_t length)
 {
   size_t i;
+  assert(length % AES_BLOCKLEN == 0);
+
   uint8_t *Iv = ctx->Iv;
   for (i = 0; i < length; i += AES_BLOCKLEN)
   {
@@ -516,6 +519,8 @@ void AES_CBC_encrypt_buffer(struct AES_ctx *ctx, uint8_t* buf, size_t length)
 void AES_CBC_decrypt_buffer(struct AES_ctx* ctx, uint8_t* buf, size_t length)
 {
   size_t i;
+  assert(length % AES_BLOCKLEN == 0);
+
   uint8_t storeNextIv[AES_BLOCKLEN];
   for (i = 0; i < length; i += AES_BLOCKLEN)
   {
