@@ -1,4 +1,5 @@
 #include <netdb.h>
+#include <time.h>
 #include <stdio.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -9,9 +10,11 @@
 #include <arpa/inet.h>
 #include "aes.h"
 #include "messages.h"
+#include "util.h"
 
 
 int main(int argc, char* argv[]) {
+    srand(time(NULL));
     struct sockaddr_in sockaddr;
 
     int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -24,7 +27,22 @@ int main(int argc, char* argv[]) {
     connect(sock, (struct sockaddr *)&sockaddr, sizeof(sockaddr));
 
     struct tc2_msg_init init_msg;
-    strncpy(init_msg.key, AES_KEY, 64);
+
+    // Encrypt ID with key
+    struct AES_ctx ctx;
+
+    char* iv = rand_bytes(16);
+
+    uint8_t key[] = AES_KEY;
+
+    AES_init_ctx_iv(&ctx, key, iv);
+    memcpy(init_msg.iv, iv, 16);
+    free(iv);
+
+    uint8_t secret[] = CLIENT_SECRET;
+
+    memcpy(init_msg.enc_id, secret, 32);
+    AES_CBC_encrypt_buffer(&ctx, init_msg.enc_id, 32);
     
 
     struct tc2_msg_preamble preamble;

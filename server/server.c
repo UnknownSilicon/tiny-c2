@@ -102,13 +102,19 @@ void start_server(in_addr_t* host, short port) {
             continue;
         }
 
-        printf("Got data: %s\n", init_msg.key);
+        printf("Got data\n");
 
-        char* expected_key = AES_KEY;
+        // Decrypt message
+        struct AES_ctx ctx;
+        uint8_t key[] = AES_KEY;
+        AES_init_ctx_iv(&ctx, key, init_msg.iv);
+        AES_CBC_decrypt_buffer(&ctx, init_msg.enc_id, 32);
+
+        uint8_t expected_secret[] = CLIENT_SECRET;
 
         fflush(stdout);
 
-        if (strncmp(init_msg.key, expected_key, 64) != 0) {
+        if (memcmp(init_msg.enc_id, expected_secret, 32) != 0) {
             printf("Unexpected key! Quitting\n");
             close(connfs);
             continue;

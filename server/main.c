@@ -79,7 +79,7 @@ int main(int argc, char* argv[]) {
 
     struct hostent* hostname = gethostbyname(arguments.ip);
 
-    printf("Starting server on host %s %d", arguments.ip, arguments.port);
+    printf("Starting server on host %s %d\n", arguments.ip, arguments.port);
 
     start_server((in_addr_t*) hostname->h_addr_list[0], arguments.port);
 

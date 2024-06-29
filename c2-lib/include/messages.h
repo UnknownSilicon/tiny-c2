@@ -10,7 +10,8 @@ typedef enum TC2_MESSAGE_STYLE {
 } TC2_MESSAGE_STYLE_ENUM;
 
 struct tc2_msg_init {
-    char key[64];
+    uint8_t iv[16];
+    uint8_t enc_id[32];
 };
 TC2_MESSAGE_TYPE_ENUM INIT_STYLE = FIXED;
 

@@ -19,3 +19,15 @@ int set_timeout(int sock, struct timeval *timeout) {
     }
     return res;
 }
+
+
+// Generate `size` random bytes with malloc. Remember to free!
+uint8_t* rand_bytes(ssize_t size) {
+    uint8_t* mem = malloc(size);
+
+    for (int i=0; i < size; i++) {
+        mem[i] = rand() % 255;
+    }
+
+    return mem;
+}
