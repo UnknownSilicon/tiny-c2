@@ -1,6 +1,6 @@
 
 
-add_executable(server main.c server.c)
+add_executable(server main.c server.c cli.c)
 
 target_include_directories(server PUBLIC "./include" "../c2-lib/include")
 

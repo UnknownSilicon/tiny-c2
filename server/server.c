@@ -46,7 +46,6 @@ void start_server(in_addr_t* host, short port) {
     printf("Server started\n");
 
     while(1) {
-        fflush(stdout);
         struct sockaddr_in client_sockaddr;
 
         int sin_size = sizeof(struct sockaddr);
@@ -112,8 +111,6 @@ void start_server(in_addr_t* host, short port) {
 
         uint8_t expected_secret[] = CLIENT_SECRET;
 
-        fflush(stdout);
-
         if (memcmp(init_msg.enc_id, expected_secret, 32) != 0) {
             printf("Unexpected key! Quitting\n");
             close(connfs);
@@ -134,8 +131,7 @@ void start_server(in_addr_t* host, short port) {
             // Potentially use this to count active child processes
             // Useful to ensure not too many clients establish connections at once
             // And DOS the server
-            printf("Hello from parent process\n");
-            fflush(stdout);
+
             close(connfs);
             continue;
         }
@@ -159,9 +155,6 @@ void start_server(in_addr_t* host, short port) {
         }
 
         fflush(stdout);
-
-        //char buf[100] = "abc";
-        //write(connfs, buf, strlen(buf));
 
         exit(0);
     }

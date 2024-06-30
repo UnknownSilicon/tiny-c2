@@ -2,10 +2,14 @@
 #include <errno.h>
 #include <limits.h>
 #include <netdb.h>
+#include <sys/prctl.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include "cli.h"
 #include "server.h"
 #include "tc2.h"
 #include "version.h"
@@ -81,7 +85,33 @@ int main(int argc, char* argv[]) {
 
     printf("Starting server on host %s %d\n", arguments.ip, arguments.port);
 
-    start_server((in_addr_t*) hostname->h_addr_list[0], arguments.port);
+    signal(SIGCHLD, handle_sigchld);
+
+    // To avoid a race condition, we need to check PIDs
+    int pid;
+    pid_t ppid_before_fork = getpid();
+    if ((pid = fork()) == -1) {
+        // Fork failed
+        printf("Fork failed!\n");
+        return 1;
+    } else if(pid == 0) {
+        // Child process
+        // Kill the child process if the parent dies
+        int r = prctl(PR_SET_PDEATHSIG, SIGTERM);
+        if (r == -1) { perror(0); return 1; }
+
+        // Handle race condition for prctl
+        if (getppid() != ppid_before_fork) {
+            return 1;
+        }
+
+        start_server((in_addr_t*) hostname->h_addr_list[0], arguments.port);
+        return 0;
+    }
+
+    // Parent process
+
+    start_cli();
 
     return 0;
 }
