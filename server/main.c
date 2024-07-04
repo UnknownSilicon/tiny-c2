@@ -105,13 +105,42 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 
-        start_server((in_addr_t*) hostname->h_addr_list[0], arguments.port);
+        start_cli();
         return 0;
     }
 
     // Parent process
 
-    start_cli();
+    start_server((in_addr_t*) hostname->h_addr_list[0], arguments.port);
+
+
+    /*
+    Note: It might be better for the CLI to Also be a child process and the parent to not really do much, or be the server process.
+    The server process makes sense since it's already creating children, so if it handles memory map creation, we can mark memory
+    as anonymous.
+    IPC method:
+
+    Shared memory.
+    (Questionable part): First, the grandparent process, this one, creates a shared memory region.
+    This region will contain temporary references to other memory regions, created by the server handler.
+    This way, each child has their own message buffer.
+    The catch here is there needs to be a lock/semaphore/synchronization solution so there isn't a
+    race condition of updating this.
+    For now, since there's just one server process, the parent process and server process will be using this.
+
+    On successful connection, the server process locks the structure if it can
+    (or waits until it can obtain it. Need to make sure the server doesn't hold it for too long).
+    It will then create a memory region for the child process and store the pointer to it in this connection
+    map. This just needs to be temporary and can be cleared once the parent process sees it.
+
+    When the cli process does Anything, it needs to go and read the connections block, store it locally, increasing
+    local memory as needed, and clear the block. Now, the cli process has a reference to the child's shared memory.
+    The child process is mostly self-sustaining, as it can do the basic comms back and forth, but the cli is used to
+    issue commands to the child using this individual shared memory block.
+    This Also needs a locking mechanism, but similarly it should be fine as the first thing each side does when reading memory is
+    copying it to local memory.
+    
+    */
 
     return 0;
 }
