@@ -1,16 +1,18 @@
+#include <arpa/inet.h>
+#include <netinet/in.h>
 #include <stdio.h>
 #include <signal.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/mman.h>
 #include <sys/prctl.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include "aes.h"
+#include "ipc.h"
 #include "messages.h"
 #include "server.h"
 #include "util.h"
@@ -19,7 +21,7 @@ void handle_sigchld(int signum) {
     wait(NULL);
 }
 
-void start_server(in_addr_t* host, short port) {
+void start_server(in_addr_t* host, short port, struct init_map* i_map) {
     struct sockaddr_in sockaddr;
     int pid;
 

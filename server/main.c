@@ -1,15 +1,19 @@
+#define _GNU_SOURCE
 #include <argp.h>
 #include <errno.h>
 #include <limits.h>
 #include <netdb.h>
-#include <sys/prctl.h>
+#include <semaphore.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/prctl.h>
+#include <sys/mman.h>
 #include <unistd.h>
 #include "cli.h"
+#include "ipc.h"
 #include "server.h"
 #include "tc2.h"
 #include "version.h"
@@ -87,6 +91,28 @@ int main(int argc, char* argv[]) {
 
     signal(SIGCHLD, handle_sigchld);
 
+    // Create a shared, anonymous RW memory map for the init structure.
+    struct init_map *i_map = (struct init_map*) mmap(NULL, sizeof(struct init_map), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+
+    if (i_map == MAP_FAILED) {
+        printf("Mmap failed %d\n", errno);
+        return 1;
+    }
+
+    // Initialize semaphore with 1, since nothing has to read or write immediately 
+    int sem_res = sem_init(&i_map->sem, 1, 1);
+
+    if (sem_res == -1) {
+        if (errno == ENOSYS) {
+            printf("Process-shared semaphores not supported on this system.\n");
+        } else {
+            printf("Unknown error while initializing semaphore.\n");
+        }
+
+        return 1;
+    }
+
+
     // To avoid a race condition, we need to check PIDs
     int pid;
     pid_t ppid_before_fork = getpid();
@@ -105,13 +131,13 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 
-        start_cli();
+        start_cli(i_map);
         return 0;
     }
 
     // Parent process
 
-    start_server((in_addr_t*) hostname->h_addr_list[0], arguments.port);
+    start_server((in_addr_t*) hostname->h_addr_list[0], arguments.port, i_map);
 
 
     /*
@@ -139,7 +165,6 @@ int main(int argc, char* argv[]) {
     issue commands to the child using this individual shared memory block.
     This Also needs a locking mechanism, but similarly it should be fine as the first thing each side does when reading memory is
     copying it to local memory.
-    
     */
 
     return 0;
