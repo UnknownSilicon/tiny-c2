@@ -112,6 +112,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    i_map->curr_conn = 0;
+
 
     // To avoid a race condition, we need to check PIDs
     int pid;

@@ -1,4 +1,6 @@
+#define _GNU_SOURCE
 #include <arpa/inet.h>
+#include <errno.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <signal.h>
@@ -12,6 +14,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include "aes.h"
+#include "handler.h"
 #include "ipc.h"
 #include "messages.h"
 #include "server.h"
@@ -158,6 +161,35 @@ void start_server(in_addr_t* host, short port, struct init_map* i_map) {
 
         fflush(stdout);
 
+        // Create new conn map mmap
+        struct connection *conn_map = (struct connection*) mmap(NULL, sizeof(struct connection), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+
+        if (conn_map == MAP_FAILED) {
+            printf("Mmap failed %d\n", errno);
+            close(connfs);
+            exit(1);
+        }
+
+        // Now, acquire lock for i_map and add connection
+        sem_wait(&i_map->sem); // NOTE: Could switch to sem_timedwait if timing out is an option
+        int curr_conn = i_map->curr_conn;
+
+        if (curr_conn >= NUM_CONNS) {
+            sem_post(&i_map->sem);
+            printf("Too many new connections! Wait and try again\n");
+            close(connfs);
+            exit(1);
+        }
+
+        i_map->conns[curr_conn] = conn_map;
+
+        // Release lock and go to handler
+        sem_post(&i_map->sem);
+
+
+        handle(connfs, conn_map);
+
+        close(connfs);
         exit(0);
     }
 }
