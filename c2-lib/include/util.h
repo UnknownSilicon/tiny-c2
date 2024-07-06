@@ -11,3 +11,12 @@ int set_timeout(int sock, struct timeval *timeout);
 
 // Generate `size` random bytes with malloc. Remember to free!
 uint8_t* rand_bytes(ssize_t size);
+
+
+// Linked List
+
+struct ll_node {
+    struct ll_node* backward;
+    struct ll_node* forward;
+    void* data;  
+};
