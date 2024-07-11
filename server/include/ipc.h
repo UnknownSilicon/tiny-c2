@@ -14,6 +14,6 @@ struct init_map {
 
 struct connection {
     sem_t sem;
-
+    uint64_t id;
 };
 #endif

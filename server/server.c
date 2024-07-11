@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 #include <arpa/inet.h>
 #include <errno.h>
+#include <limits.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <signal.h>
@@ -50,11 +51,20 @@ void start_server(in_addr_t* host, short port, struct init_map* i_map) {
 
     printf("Server started\n");
 
+    uint64_t next_id = 0;
+
     while(1) {
         struct sockaddr_in client_sockaddr;
 
         int sin_size = sizeof(struct sockaddr);
         int connfs = accept(serv_sock, (struct sockaddr *)&client_sockaddr, &sin_size);
+
+        if (next_id == ULONG_MAX) {
+            printf("Unable to initialize a new ID. Cannot create new connections\n");
+            close(connfs);
+            exit(1);
+        }
+
 
         // Set socket timeout, at least during initialization
         // This prevents clients from completely locking up the init process
@@ -169,6 +179,23 @@ void start_server(in_addr_t* host, short port, struct init_map* i_map) {
             close(connfs);
             exit(1);
         }
+
+        // Initialize semaphore with 1, since nothing has to read or write immediately 
+        int sem_res = sem_init(&conn_map->sem, 1, 1);
+
+        if (sem_res == -1) {
+            if (errno == ENOSYS) {
+                printf("Process-shared semaphores not supported on this system.\n");
+            } else {
+                printf("Unknown error while initializing semaphore.\n");
+            }
+
+            close(connfs);
+            exit(1);
+        }
+
+        conn_map->id = next_id;
+        next_id++;
 
         // Now, acquire lock for i_map and add connection
         sem_wait(&i_map->sem); // NOTE: Could switch to sem_timedwait if timing out is an option
