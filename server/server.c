@@ -25,7 +25,7 @@ void handle_sigchld(int signum) {
     wait(NULL);
 }
 
-void start_server(in_addr_t* host, short port, struct init_map* i_map) {
+void start_server(in_addr_t* host, short port, struct message_queues* i_map) {
     struct sockaddr_in sockaddr;
     int pid;
 
@@ -169,54 +169,28 @@ void start_server(in_addr_t* host, short port, struct init_map* i_map) {
             printf("Unable to set socket timeout %d\n", to_res);
         }
 
+        struct init_message init_message;
+        memset(&init_message, 0, sizeof(init_message));
+
+        struct message message;
+        message.client_id = next_id;
+        message.fragmented = false;
+        message.fragment_end = false;
+        message.type = IPC_INIT;
+        message.init_message = init_message;
+
+        next_id += 1;
+
+        ipc_send_message_blocking(i_map, &message);
+
+
         fflush(stdout);
 
-        // Create new conn map mmap
-        struct connection *conn_map = (struct connection*) mmap(NULL, sizeof(struct connection), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
-        if (conn_map == MAP_FAILED) {
-            printf("Mmap failed %d\n", errno);
-            close(connfs);
-            exit(1);
-        }
-
-        // Initialize semaphore with 1, since nothing has to read or write immediately 
-        int sem_res = sem_init(&conn_map->sem, 1, 1);
-
-        if (sem_res == -1) {
-            if (errno == ENOSYS) {
-                printf("Process-shared semaphores not supported on this system.\n");
-            } else {
-                printf("Unknown error while initializing semaphore.\n");
-            }
-
-            close(connfs);
-            exit(1);
-        }
-
-        conn_map->id = next_id;
-        next_id++;
-
-        // Now, acquire lock for i_map and add connection
-        sem_wait(&i_map->sem); // NOTE: Could switch to sem_timedwait if timing out is an option
-        int curr_conn = i_map->curr_conn;
-
-        if (curr_conn >= NUM_CONNS) {
-            sem_post(&i_map->sem);
-            printf("Too many new connections! Wait and try again\n");
-            close(connfs);
-            exit(1);
-        }
-
-        i_map->conns[curr_conn] = conn_map;
-
-        // Release lock and go to handler
-        sem_post(&i_map->sem);
-
-
-        handle(connfs, conn_map);
+        handle(connfs, i_map);
 
         close(connfs);
+        printf("Closed\n");
         exit(0);
     }
 }
