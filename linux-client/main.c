@@ -52,6 +52,12 @@ int main(int argc, char* argv[]) {
     write(sock, &preamble, sizeof(preamble));
     write(sock, &init_msg, sizeof(init_msg));
 
+    char data[16];
+    fgets(data, 8, stdin);
+    write(sock, "1", 1);
+
+    sleep(10);
+
     close(sock);
 
     return 0;
