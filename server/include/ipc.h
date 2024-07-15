@@ -29,6 +29,7 @@ CASSERT(!(QUEUE_SIZE % 8), queue_size_ipc);
 typedef enum IPC_MESSAGE {
     IPC_NULL, // No message, for marking empty regions
     IPC_INIT,
+    IPC_DISCONNECT,
     IPC_PING
 } IPC_MESSAGE;
 
@@ -36,8 +37,8 @@ struct client_info {
     uint64_t id;
 };
 
-struct init_message {
-    char dummy[16];
+struct empty_message {
+    char dummy[1];
 };
 
 struct ping_message {
@@ -50,7 +51,8 @@ struct message {
     bool fragment_end;
     IPC_MESSAGE type;
     union {
-        struct init_message init_message;
+        struct empty_message init_message;
+        struct empty_message disconnect_message;
         struct ping_message ping_message;
     };
 };

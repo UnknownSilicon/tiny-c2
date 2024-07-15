@@ -168,7 +168,7 @@ void start_server(in_addr_t* host, short port, struct message_queues* i_map) {
             printf("Unable to set socket timeout %d\n", to_res);
         }
 
-        struct init_message init_message;
+        struct empty_message init_message;
         memset(&init_message, 0, sizeof(init_message));
 
         struct message message;
@@ -190,7 +190,18 @@ void start_server(in_addr_t* host, short port, struct message_queues* i_map) {
 
         close(connfs);
 
-        // TODO: Send client disconnect message
+        struct empty_message dc_message_empty;
+        memset(&dc_message_empty, 0, sizeof(dc_message_empty));
+
+        struct message dc_message;
+        dc_message.client_id = message.client_id;
+        dc_message.fragmented = false;
+        dc_message.fragment_end = false;
+        dc_message.type = IPC_DISCONNECT;
+        dc_message.disconnect_message = dc_message_empty;
+
+        ipc_send_message_up_blocking(i_map, &dc_message);
+
         printf("Closed\n");
         exit(0);
     }

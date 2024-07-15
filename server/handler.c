@@ -63,8 +63,6 @@ void read_and_handle_messages(uint64_t this_client, struct message_queues* i_map
             }
         }
     }
-
-    
 }
 
 void handle(int sock, uint64_t client_id, struct message_queues* m_queue) {

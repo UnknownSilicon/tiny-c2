@@ -170,6 +170,8 @@ void start_cli(struct message_queues* i_map) {
 
                 if (type == IPC_INIT) {
                     // Add connection to list
+
+                    // Check if client ID is already connected. Idk if it's realistically easy to kill that new connection though.
                     struct ll_node* new_node = malloc(sizeof (struct ll_node));
                     new_node->backward = head;
                     struct ll_node* next = head->forward;
@@ -184,6 +186,39 @@ void start_cli(struct message_queues* i_map) {
                     head->data = info;
 
                     printf("New client: %ld\n", client_id);
+                } else if (type == IPC_DISCONNECT) {
+                    // Client disconnected, remove from linked list
+
+                    struct ll_node* next_node = root->forward;
+
+                    if (next_node == NULL) {
+                        printf("Something broke! next_node is NULL");
+                        exit(1);
+                    }
+
+                    bool found_client = false;
+
+                    while (next_node->data != NULL) {
+                        struct client_info* client_info = (struct client_info*) next_node->data;
+                    
+                        if (client_info->id == client_id) {
+                            found_client = true;
+                            // Unlink list
+                            next_node->backward->forward = next_node->forward;
+                            next_node->forward->backward = next_node->backward;
+                            free(client_info);
+                            free(next_node);
+                            break;
+                        }
+
+                        next_node = next_node->forward;
+                    }
+
+                    if (found_client) {
+                        printf("Client %ld disconnected\n", client_id);
+                    } else {
+                        printf("Could not find client %ld to disconnect\n", client_id);
+                    }
                 } else {
                     printf("Unknown message type %d\n", (int)type);
                 }
