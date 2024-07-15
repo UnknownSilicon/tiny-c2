@@ -99,9 +99,23 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    for (int i=0; i<NUM_QUEUES; i++) {
+    for (int i=0; i<NUM_UP_QUEUES; i++) {
         // Initialize semaphore with 1, since nothing has to read or write immediately 
-        int sem_res = sem_init(&i_map->queues[i].sem, 1, 1);
+        int sem_res = sem_init(&i_map->up_queues[i].sem, 1, 1);
+
+        if (sem_res == -1) {
+            if (errno == ENOSYS) {
+                printf("Process-shared semaphores not supported on this system.\n");
+            } else {
+                printf("Unknown error while initializing semaphore.\n");
+            }
+
+            return 1;
+        }
+    }
+    for (int i=0; i<NUM_DOWN_QUEUES; i++) {
+        // Initialize semaphore with 1, since nothing has to read or write immediately 
+        int sem_res = sem_init(&i_map->down_queues[i].sem, 1, 1);
 
         if (sem_res == -1) {
             if (errno == ENOSYS) {

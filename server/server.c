@@ -51,7 +51,7 @@ void start_server(in_addr_t* host, short port, struct message_queues* i_map) {
 
     printf("Server started\n");
 
-    uint64_t next_id = 0;
+    uint64_t next_id = 1;
 
     while(1) {
         struct sockaddr_in client_sockaddr;
@@ -160,7 +160,6 @@ void start_server(in_addr_t* host, short port, struct message_queues* i_map) {
         }
 
         // Child process
-        printf("Hello from child process\n");
 
         // At this point, the client has authenticated and we're in the child process,
         // so we can disable timeout.
@@ -181,15 +180,17 @@ void start_server(in_addr_t* host, short port, struct message_queues* i_map) {
 
         next_id += 1;
 
-        ipc_send_message_blocking(i_map, &message);
+        ipc_send_message_up_blocking(i_map, &message);
 
 
         fflush(stdout);
 
 
-        handle(connfs, i_map);
+        handle(connfs, message.client_id, i_map);
 
         close(connfs);
+
+        // TODO: Send client disconnect message
         printf("Closed\n");
         exit(0);
     }

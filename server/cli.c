@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <semaphore.h>
 #include <signal.h>
 #include <stdio.h>
@@ -14,7 +15,7 @@ int str_eq(char* part, const char* literal) {
     return strncmp(part, literal, len) == 0;
 }
 
-void parse_and_call(char* input, struct ll_node* root) {
+void parse_and_call(struct message_queues* i_map, char* input, struct ll_node* conn_root) {
     char* saveptr;
     char* tok = strtok_r(input, " \n", &saveptr);
 
@@ -22,12 +23,13 @@ void parse_and_call(char* input, struct ll_node* root) {
         return;
     }
 
-    if (root == NULL) {
+    if (conn_root == NULL) {
         return;
     }
 
     if (str_eq(tok, "exit")) {
         if (kill(getppid(), SIGTERM) != 0) {
+            // TODO: In parent, handle SIGTERM and actually close socket
             kill(getppid(), SIGKILL);
         }
 
@@ -38,7 +40,7 @@ void parse_and_call(char* input, struct ll_node* root) {
     } else if (str_eq(tok, "list")) {
         printf("Current connections:\n");
 
-        struct ll_node* next_node = root->forward;
+        struct ll_node* next_node = conn_root->forward;
 
         if (next_node == NULL) {
             printf("Something broke! next_node is NULL");
@@ -52,6 +54,63 @@ void parse_and_call(char* input, struct ll_node* root) {
 
             next_node = next_node->forward;
         }
+    } else if (str_eq(tok, "ping")) {
+        // Get second argument
+        tok = strtok_r(NULL, " \n", &saveptr);
+
+        if (tok == NULL) {
+            printf("Missing parameter <clientid:ulong>\n");
+            return;
+        }
+
+        uint64_t ul = strtoul(tok, NULL, 10);
+
+        if (ul == 0 || ul == ULONG_MAX) {
+            printf("Invalid parameter. Expected unsigned long\n");
+            return;
+        }
+
+        // Check if client exists.
+
+        struct ll_node* next_node = conn_root->forward;
+
+        if (next_node == NULL) {
+            printf("Something broke! next_node is NULL");
+            exit(1);
+        }
+
+        bool found_client = false;
+
+        while (next_node->data != NULL) {
+            struct client_info* client_info = (struct client_info*) next_node->data;
+        
+            if (client_info->id == ul) {
+                found_client = true;
+                break;
+            }
+
+            next_node = next_node->forward;
+        }
+
+        if (!found_client) {
+            printf("Could not find client %ld\n", ul);
+            return;
+        }
+
+        // ul is client ID
+        struct ping_message ping_message;
+        memset(&ping_message, 0, sizeof(ping_message));
+
+        struct message message;
+        message.client_id = ul;
+        message.fragmented = false;
+        message.fragment_end = false;
+        message.type = IPC_PING;
+        message.ping_message = ping_message;
+
+        ipc_send_message_down_blocking(i_map, &message);
+
+        printf("Ping sent to client %ld\n", ul);
     } else {
         printf("Unknown command\n");
     }
@@ -80,8 +139,8 @@ void start_cli(struct message_queues* i_map) {
         }
 
         // Read message queues, then handle command
-        for (int i=0; i<NUM_QUEUES; i++) {
-            struct queue* queue = &i_map->queues[i];
+        for (int i=0; i<NUM_UP_QUEUES; i++) {
+            struct queue* queue = &i_map->up_queues[i];
 
             // Lock queue and copy messages
             sem_wait(&queue->sem);
@@ -133,6 +192,6 @@ void start_cli(struct message_queues* i_map) {
 
 
         // Parse input
-        parse_and_call(input, root);
+        parse_and_call(i_map, input, root);
     }
 }
