@@ -134,6 +134,9 @@ void start_server(in_addr_t* host, short port, struct message_queues* i_map) {
 
         printf("Key valid. Proceeding...\n");
 
+        uint64_t curr_id = next_id;
+        next_id += 1;
+
         // To avoid a race condition, we need to check PIDs
         pid_t ppid_before_fork = getpid();
         if ((pid = fork()) == -1) {
@@ -172,13 +175,11 @@ void start_server(in_addr_t* host, short port, struct message_queues* i_map) {
         memset(&init_message, 0, sizeof(init_message));
 
         struct message message;
-        message.client_id = next_id;
+        message.client_id = curr_id;
         message.fragmented = false;
         message.fragment_end = false;
         message.type = IPC_INIT;
         message.init_message = init_message;
-
-        next_id += 1;
 
         ipc_send_message_up_blocking(i_map, &message);
 
@@ -186,7 +187,7 @@ void start_server(in_addr_t* host, short port, struct message_queues* i_map) {
         fflush(stdout);
 
 
-        handle(connfs, message.client_id, i_map);
+        handle(connfs, curr_id, i_map);
 
         close(connfs);
 
@@ -194,7 +195,7 @@ void start_server(in_addr_t* host, short port, struct message_queues* i_map) {
         memset(&dc_message_empty, 0, sizeof(dc_message_empty));
 
         struct message dc_message;
-        dc_message.client_id = message.client_id;
+        dc_message.client_id = curr_id;
         dc_message.fragmented = false;
         dc_message.fragment_end = false;
         dc_message.type = IPC_DISCONNECT;

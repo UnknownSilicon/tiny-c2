@@ -67,6 +67,13 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 
 static struct argp argp = { options, parse_opt, args_doc, doc, 0, 0, 0 };
 
+
+void handle_sigsegv(int sig) {
+    printf("SIGSEGV PID: %d\n", getpid());
+    signal(SIGSEGV, SIG_DFL);
+    raise(SIGSEGV);
+}
+
 int main(int argc, char* argv[]) {
 
     struct arguments arguments;
@@ -90,6 +97,7 @@ int main(int argc, char* argv[]) {
     printf("Starting server on host %s %d\n", arguments.ip, arguments.port);
 
     signal(SIGCHLD, handle_sigchld);
+    signal(SIGSEGV, handle_sigsegv);
 
     // Create a shared, anonymous RW memory map for the init structure.
     struct message_queues *i_map = (struct message_queues*) mmap(NULL, sizeof(struct message_queues), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
@@ -113,6 +121,7 @@ int main(int argc, char* argv[]) {
             return 1;
         }
     }
+    
     for (int i=0; i<NUM_DOWN_QUEUES; i++) {
         // Initialize semaphore with 1, since nothing has to read or write immediately 
         int sem_res = sem_init(&i_map->down_queues[i].sem, 1, 1);

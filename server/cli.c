@@ -204,6 +204,9 @@ void start_cli(struct message_queues* i_map) {
                         if (client_info->id == client_id) {
                             found_client = true;
                             // Unlink list
+                            if (next_node == head) {
+                                head = next_node->backward;
+                            }
                             next_node->backward->forward = next_node->forward;
                             next_node->forward->backward = next_node->backward;
                             free(client_info);
