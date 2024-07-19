@@ -25,20 +25,39 @@ void handle_sigchld(int signum) {
     wait(NULL);
 }
 
+int server_sock = 0;
+
+void stop_server(int sig) {
+    if (server_sock != -1) {
+        close(server_sock);
+    }
+
+    exit(1);
+}
+
+
 void start_server(in_addr_t* host, short port, struct message_queues* i_map) {
     struct sockaddr_in sockaddr;
     int pid;
 
     signal(SIGCHLD, handle_sigchld);
+    signal(SIGTERM, stop_server);
+    signal(SIGKILL, stop_server);
 
-    int serv_sock = socket(AF_INET, SOCK_STREAM, 0);
+    server_sock = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (server_sock == -1) {
+        printf("Unable to create server socket\n");
+        exit(1);
+    }
+
     sockaddr.sin_family = AF_INET;
     sockaddr.sin_port = htons(port);
     sockaddr.sin_addr.s_addr = *host;
 
-    bind(serv_sock, (struct sockaddr*) &sockaddr, sizeof(sockaddr));
+    bind(server_sock, (struct sockaddr*) &sockaddr, sizeof(sockaddr));
 
-    listen(serv_sock, 10);
+    listen(server_sock, 10);
 
     struct timeval tv;
     tv.tv_sec = 5; // 5 second timeout
@@ -57,7 +76,12 @@ void start_server(in_addr_t* host, short port, struct message_queues* i_map) {
         struct sockaddr_in client_sockaddr;
 
         int sin_size = sizeof(struct sockaddr);
-        int connfs = accept(serv_sock, (struct sockaddr *)&client_sockaddr, &sin_size);
+        int connfs = accept(server_sock, (struct sockaddr *)&client_sockaddr, &sin_size);
+
+        if (connfs == -1) {
+            printf("Unable to accept socket\n");
+            exit(1);
+        }
 
         if (next_id == ULONG_MAX) {
             printf("Unable to initialize a new ID. Cannot create new connections\n");
@@ -206,4 +230,7 @@ void start_server(in_addr_t* host, short port, struct message_queues* i_map) {
         printf("Closed\n");
         exit(0);
     }
+
+    close(server_sock);
+    server_sock = -1;
 }
