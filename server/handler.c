@@ -69,8 +69,21 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue) {
     printf("Starting handler for client %ld\n", client_id);
     while (1) {
         char buf[16];
-        read(sock, buf, 1);
+        int val = read(sock, buf, 1);
+
+        // TODO: This will not always be how this is handled. In the future, we want to continue listening for the same client to reconnect.
+        // This is mostly done on the cli/api side of things. We just want to retain client info even after it disconnects and if
+        // a client with the same internal ID connects, we know it's the same so we just re-assign it to be the same.
+        if (val == -1) {
+            // Error
+            printf("Error while reading socket for client %ld\n", client_id);
+            break;
+        } else if (val == 0) {
+            // EOF
+            printf("Client disconnected\n");
+            break;
+        }
+
         read_and_handle_messages(client_id, m_queue);
-        return;
     }
 }
