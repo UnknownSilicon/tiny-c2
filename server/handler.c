@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -92,9 +93,13 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue) {
         // This is mostly done on the cli/api side of things. We just want to retain client info even after it disconnects and if
         // a client with the same internal ID connects, we know it's the same so we just re-assign it to be the same.
         if (val == -1) {
-            // Error
-            printf("Error while reading socket for client %ld\n", client_id);
-            return;
+            if (errno != EAGAIN) {
+                // Error
+                printf("Error while reading socket for client %ld. Errno %d\n", client_id, errno);
+                return;
+            }
+            // Non-blocking
+            continue;
         } else if (val == 0) {
             // EOF
             printf("Client disconnected\n");
