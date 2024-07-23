@@ -122,7 +122,7 @@ void start_server(in_addr_t* host, short port, struct message_queues* i_map) {
             continue;
         }
 
-        if (INIT_STYLE == FIXED) {
+        if (TC2_MSG_INIT_STYLE == FIXED) {
             if (preamble.len != sizeof(struct tc2_msg_init)) {
                 printf("Received unexpected message length. INIT is Fixed message length of %ld, but got %d\n", sizeof(struct tc2_msg_init), preamble.len);
                 close(connfs);

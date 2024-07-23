@@ -9,9 +9,13 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include "aes.h"
+#include "capabilities.h"
 #include "messages.h"
 #include "util.h"
 
+// TODO: Dynamically generate this based on compiler flags, adding in capability files as needed
+TC2_CAPABILITY_ENUM capabilities[] = { SYSTEM };
+uint32_t NUM_CAPS = 1;
 
 int main(int argc, char* argv[]) {
     srand(time(NULL));

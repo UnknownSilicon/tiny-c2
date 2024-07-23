@@ -1,0 +1,5 @@
+
+typedef enum TC2_CAPABILITY {
+    NONE,
+    SYSTEM
+} TC2_CAPABILITY_ENUM;
