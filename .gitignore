@@ -61,3 +61,4 @@ CMakeCache.txt
 build/
 *cmake_install.cmake
 *Makefile
+Makefile
