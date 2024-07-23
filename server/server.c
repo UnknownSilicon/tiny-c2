@@ -76,7 +76,7 @@ void start_server(in_addr_t* host, short port, struct message_queues* i_map) {
         struct sockaddr_in client_sockaddr;
 
         int sin_size = sizeof(struct sockaddr);
-        int connfs = accept(server_sock, (struct sockaddr *)&client_sockaddr, &sin_size);
+        int connfs = accept(server_sock, (struct sockaddr *)&client_sockaddr, (socklen_t*) &sin_size);
 
         if (connfs == -1) {
             printf("Unable to accept socket\n");
@@ -122,12 +122,10 @@ void start_server(in_addr_t* host, short port, struct message_queues* i_map) {
             continue;
         }
 
-        if (TC2_MSG_INIT_STYLE == FIXED) {
-            if (preamble.len != sizeof(struct tc2_msg_init)) {
-                printf("Received unexpected message length. INIT is Fixed message length of %ld, but got %d\n", sizeof(struct tc2_msg_init), preamble.len);
-                close(connfs);
-                continue;
-            }
+        if (preamble.len != sizeof(struct tc2_msg_init)) {
+            printf("Received unexpected message length. INIT is Fixed message length of %ld, but got %d\n", sizeof(struct tc2_msg_init), preamble.len);
+            close(connfs);
+            continue;
         }
 
         // Read init message, check key

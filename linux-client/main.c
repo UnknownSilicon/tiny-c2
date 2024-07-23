@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) {
     // Encrypt ID with key
     struct AES_ctx ctx;
 
-    char* iv = rand_bytes(16);
+    uint8_t* iv = rand_bytes(16);
 
     uint8_t key[] = AES_KEY;
 

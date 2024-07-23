@@ -1,5 +1,6 @@
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include "handler.h"
@@ -72,7 +73,7 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue) {
     printf("Starting handler for client %ld\n", client_id);
 
     // Make socket non-blocking
-    int flags = fnctl(sock, F_GETFL, 0);
+    int flags = fcntl(sock, F_GETFL, 0);
     fcntl(sock, F_SETFL, flags | O_NONBLOCK);
 
     bool reading_array = false;
@@ -120,7 +121,7 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue) {
             }
 
             if (preamble.len != expected_len) {
-                printf("Unepxected length in preamble. Expected %d, got %d\n", expected_len, preamble.len);
+                printf("Unepxected length in preamble. Expected %ld, got %d\n", expected_len, preamble.len);
                 continue;
             }
 
@@ -188,7 +189,7 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue) {
             } else if (preamble.type == ARRAY_STOP) {
                 struct tc2_array_stop *msg_arr_stop = (struct tc2_array_stop *)message;
             } else if (preamble.type == CAPABILITY) {
-                struct tc2_capability *msg_cap = (struct tc2_cap *)message;
+                struct tc2_capability *msg_cap = (struct tc2_capability *)message;
                 
             } else {
                 // This should be impossible at this point, but just in case
