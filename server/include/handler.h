@@ -1,4 +1,3 @@
 #include <stdint.h>
-#include "ipc.h"
 
-void handle(int sock, uint64_t client_id, struct message_queues* conn_data);
+void handle_arr_capability(struct tc2_capability cap_arr[], uint32_t num_elements);
