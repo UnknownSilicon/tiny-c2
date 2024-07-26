@@ -158,8 +158,7 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue) {
             if (preamble.type == ARRAY) {
                 if (reading_array) {
                     printf("Error. Already reading array\n");
-                    free(message);
-                    continue;
+                    goto clean;
                 }
 
                 struct tc2_array *msg_arr = (struct tc2_array *)message;
@@ -174,20 +173,17 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue) {
                     msg_size = sizeof(struct tc2_capability);
                 } else {
                     printf("Cannot create an array of type %d\n", type);
-                    free(message);
-                    continue;
+                    goto clean;
                 }
 
                 if (msg_arr->num_elements == 0) {
                     printf("Cannot create an array of size 0\n");
-                    free(message);
-                    continue;
+                    goto clean;
                 }
 
                 if (msg_arr->num_elements > MAX_ARR_ELEMENTS) {
                     printf("Array too large. Cannot create an array of size %d\n", msg_arr->num_elements);
-                    free(message);
-                    continue;
+                    goto clean;
                 }
 
                 reading_array = true;
@@ -202,34 +198,50 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue) {
 
                 if (!reading_array) {
                     printf("Cannot stop array that hasn't been started\n");
-                    free(message);
-                    continue;
+                    goto clean;
                 }
 
                 reading_array = false;
 
 //----------------- Array Types ------------------
                 if (arr_type == CAPABILITY) {
-                    handle_arr_capability((struct tc2_capability *) working_arr, arr_index-1);
+                    handle_arr_capability(sock, client_id, m_queue, (struct tc2_capability *) working_arr, arr_index);
                 } else {
                     printf("Cannot handle array of type %d. Something went wrong!\n", arr_type);
                     free(working_arr);
-                    free(message);
-                    continue;
+                    goto clean;
                 }
 
                 free(working_arr);                
             } else if (preamble.type == CAPABILITY) {
                 struct tc2_capability *msg_cap = (struct tc2_capability *)message;
-                
+
+                if (reading_array) {
+                    if (arr_type != CAPABILITY) {
+                        printf("Array type not CAPABILITY. Is %d\n", arr_type);
+                        goto clean;
+                    }
+
+                    // Store to array
+                    if (arr_index >= array_size) {
+                        printf("Array already full\n");
+                        goto clean;
+                    }
+
+                    memcpy(&((struct tc2_capability *)working_arr)[arr_index], msg_cap, sizeof(struct tc2_capability));
+                    arr_index++;
+
+                    goto clean;
+                }
+
+                handle_capability(sock, client_id, m_queue, msg_cap);
             } else {
                 // This should be impossible at this point, but just in case
                 printf("Cannot handle message type %d\n", preamble.type);
-                free(message);
-                continue;
+                goto clean;
             }
 
-            free(message);
+            clean: free(message);
         }
 
     }
