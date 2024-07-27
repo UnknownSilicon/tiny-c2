@@ -9,7 +9,18 @@
 #include "ipc.h"
 #include "util.h"
 
-static const char *HELP_TEXT = "Commands:\n"
+// ANSI escape sequences for color
+#define RED   "\x1B[31m"
+#define GRN   "\x1B[32m"
+#define YEL   "\x1B[33m"
+#define BLU   "\x1B[34m"
+#define MAG   "\x1B[35m"
+#define CYN   "\x1B[36m"
+#define WHT   "\x1B[37m"
+#define RESET "\x1B[0m"
+
+
+static const char *HELP_TEXT =  MAG "Commands:\n" RESET
                                 "\n"
                                 "help - Display this text\n"
                                 "exit - Exit the C2\n"
@@ -45,16 +56,16 @@ void parse_and_call(struct message_queues* i_map, char* input, struct ll_node* c
         }
 
         sleep(5);
-        printf("Couldn't exit after 5 seconds. Sending SIGKILL...");
+        printf(RED "Couldn't exit after 5 seconds. Sending SIGKILL..." RESET);
         kill(getppid(), SIGKILL);
         exit(0);
     } else if (str_eq(tok, "list")) {
-        printf("Current connections:\n");
+        printf(GRN "Current connections:\n" RESET);
 
         struct ll_node* next_node = conn_root->forward;
 
         if (next_node == NULL) {
-            printf("Something broke! next_node is NULL");
+            printf(RED "Something broke! next_node is NULL" RESET);
             exit(1);
         }
 
@@ -70,14 +81,14 @@ void parse_and_call(struct message_queues* i_map, char* input, struct ll_node* c
         tok = strtok_r(NULL, " \n", &saveptr);
 
         if (tok == NULL) {
-            printf("Missing parameter <clientid:ulong>\n");
+            printf(RED "Missing parameter <clientid:ulong>\n" RESET);
             return;
         }
 
         uint64_t ul = strtoul(tok, NULL, 10);
 
         if (ul == 0 || ul == ULONG_MAX) {
-            printf("Invalid parameter. Expected unsigned long\n");
+            printf(RED "Invalid parameter. Expected unsigned long\n" RESET);
             return;
         }
 
@@ -86,7 +97,7 @@ void parse_and_call(struct message_queues* i_map, char* input, struct ll_node* c
         struct ll_node* next_node = conn_root->forward;
 
         if (next_node == NULL) {
-            printf("Something broke! next_node is NULL");
+            printf(RED "Something broke! next_node is NULL" RESET);
             exit(1);
         }
 
@@ -104,7 +115,7 @@ void parse_and_call(struct message_queues* i_map, char* input, struct ll_node* c
         }
 
         if (!found_client) {
-            printf("Could not find client %ld\n", ul);
+            printf(RED "Could not find client %ld\n" RESET, ul);
             return;
         }
 
@@ -121,20 +132,20 @@ void parse_and_call(struct message_queues* i_map, char* input, struct ll_node* c
 
         ipc_send_message_down_blocking(i_map, &message);
 
-        printf("Ping sent to client %ld\n", ul);
+        printf(GRN "Ping sent to client %ld\n" RESET, ul);
     } else if (str_eq(tok, "session")) { 
         // Get second argument
         tok = strtok_r(NULL, " \n", &saveptr); // TODO: Deduplicate this code
 
         if (tok == NULL) {
-            printf("Missing parameter <clientid:ulong>\n");
+            printf(RED "Missing parameter <clientid:ulong>\n" RESET);
             return;
         }
 
         uint64_t ul = strtoul(tok, NULL, 10);
 
         if (ul == 0 || ul == ULONG_MAX) {
-            printf("Invalid parameter. Expected unsigned long\n");
+            printf(RED "Invalid parameter. Expected unsigned long\n" RESET);
             return;
         }
 
@@ -143,7 +154,7 @@ void parse_and_call(struct message_queues* i_map, char* input, struct ll_node* c
         struct ll_node* next_node = conn_root->forward;
 
         if (next_node == NULL) {
-            printf("Something broke! next_node is NULL");
+            printf(RED "Something broke! next_node is NULL" RESET);
             exit(1);
         }
 
@@ -162,20 +173,20 @@ void parse_and_call(struct message_queues* i_map, char* input, struct ll_node* c
         }
 
         if (!found_client) {
-            printf("Could not find client %ld\n", ul);
+            printf(RED "Could not find client %ld\n" RESET, ul);
             return;
         }
 
         if (client_info == NULL) {
-            printf("Something broke! client_info is NULL\n");
+            printf(RED "Something broke! client_info is NULL\n" RESET);
             exit(1);
         }
 
         *selected_session = client_info;
 
-        printf("Selected client %ld\n", ul);
+        printf(GRN "Selected client %ld\n" RESET, ul);
     } else {
-        printf("Unknown command\n");
+        printf(RED "Unknown command\n" RESET);
     }
 }
 
@@ -199,13 +210,13 @@ void start_cli(struct message_queues* i_map) {
     while (1) {
 
         if (selected_session != NULL) {
-            printf("%ld >> ", selected_session->ipc_id);
+            printf(BLU "%ld" RESET " >> ", selected_session->ipc_id);
         } else {
             printf(">> ");
         }
 
         if (fgets(input, 100, stdin) == NULL) {
-            printf("Error reading input.\n");
+            printf(RED "Error reading input.\n" RESET);
             continue;
         }
 
@@ -232,7 +243,7 @@ void start_cli(struct message_queues* i_map) {
                 struct message* message = &message_temp[m];
 
                 if (message->fragmented || message->fragment_end) {
-                    printf("Fragmentation not yet implemented!\n");
+                    printf(RED "Fragmentation not yet implemented!\n" RESET);
                     continue;
                 }
 
@@ -256,14 +267,14 @@ void start_cli(struct message_queues* i_map) {
 
                     head->data = info;
 
-                    printf("New client: %ld\n", client_id);
+                    printf(GRN "New client: %ld\n" RESET, client_id);
                 } else if (type == IPC_DISCONNECT) {
                     // Client disconnected, remove from linked list
 
                     struct ll_node* next_node = root->forward;
 
                     if (next_node == NULL) {
-                        printf("Something broke! next_node is NULL");
+                        printf(RED "Something broke! next_node is NULL" RESET);
                         exit(1);
                     }
 
@@ -294,12 +305,12 @@ void start_cli(struct message_queues* i_map) {
                     }
 
                     if (found_client) {
-                        printf("Client %ld disconnected\n", client_id);
+                        printf(YEL "Client %ld disconnected\n" RESET, client_id);
                     } else {
-                        printf("Could not find client %ld to disconnect\n", client_id);
+                        printf(RED "Could not find client %ld to disconnect\n" RESET, client_id);
                     }
                 } else {
-                    printf("Unknown message type %d\n", (int)type);
+                    printf(RED "Unknown message type %d\n" RESET, (int)type);
                 }
             }
         }
