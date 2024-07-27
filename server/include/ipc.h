@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "cassert.h"
+#include "capabilities.h"
 
 #ifndef IPC_H
 #define IPC_H
@@ -33,8 +34,12 @@ typedef enum IPC_MESSAGE {
     IPC_PING
 } IPC_MESSAGE;
 
+#define MAX_CAPS 100
+
 struct client_info {
-    uint64_t id;
+    uint64_t ipc_id;
+    // Want to also have some sort of client generated UUID
+    TC2_CAPABILITY_ENUM capabilities[MAX_CAPS];
 };
 
 struct empty_message {
