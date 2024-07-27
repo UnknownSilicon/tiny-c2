@@ -9,14 +9,14 @@
 #include "ipc.h"
 #include "util.h"
 
-static const char *HELP_TEXT = "Commands:"
-                                ""
-                                "help - Display this text"
-                                "exit - Exit the C2"
-                                "list - List connected C2 clients"
-                                "ping handler_id - Ping the internal client's handler for debugging"
-                                "session handler_id - Set the provided handler as the current handler for other commands"
-                                "";
+static const char *HELP_TEXT = "Commands:\n"
+                                "\n"
+                                "help - Display this text\n"
+                                "exit - Exit the C2\n"
+                                "list - List connected C2 clients\n"
+                                "ping handler_id - Ping the internal client's handler for debugging\n"
+                                "session handler_id - Set the provided handler as the current handler for other commands\n"
+                                "\n";
 
 int str_eq(char* part, const char* literal) {
     size_t len = strlen(literal);
