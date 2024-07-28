@@ -67,6 +67,11 @@ void read_and_handle_messages(uint64_t this_client, struct message_queues* i_map
 void handle(int sock, uint64_t client_id, struct message_queues* m_queue) {
     printf("Starting handler for client %ld\n", client_id);
 
+    // Keep track of client info here, send a copy to the CLI when it updates
+    struct client_info info;
+    info.ipc_id = client_id;
+    info.num_caps = 0;
+
     // Make socket non-blocking
     int flags = fcntl(sock, F_GETFL, 0);
     fcntl(sock, F_SETFL, flags | O_NONBLOCK);
@@ -205,7 +210,7 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue) {
 
 //----------------- Array Types ------------------
                 if (arr_type == CAPABILITY) {
-                    handle_arr_capability(sock, client_id, m_queue, (struct tc2_capability *) working_arr, arr_index);
+                    handle_arr_capability(sock, client_id, m_queue, &info,(struct tc2_capability *) working_arr, arr_index);
                 } else {
                     printf("Cannot handle array of type %d. Something went wrong!\n", arr_type);
                     free(working_arr);
@@ -234,7 +239,7 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue) {
                     goto clean;
                 }
 
-                handle_capability(sock, client_id, m_queue, msg_cap);
+                handle_capability(sock, client_id, m_queue, &info, msg_cap);
             } else {
                 // This should be impossible at this point, but just in case
                 printf("Cannot handle message type %d\n", preamble.type);

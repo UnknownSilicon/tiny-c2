@@ -12,6 +12,11 @@ typedef enum TC2_MESSAGE_TYPE {
     CAPABILITY
 } TC2_MESSAGE_TYPE_ENUM;
 
+typedef enum TC2_ADD_REM {
+    ADD,
+    REMOVE
+} TC2_ADD_REM_ENUM;
+
 /*
 FIXED messages represent a message with a fixed sized struct.
 These can always be read directly into a struct.
@@ -52,6 +57,7 @@ struct tc2_array_stop {
 
 struct tc2_capability {
     TC2_CAPABILITY_ENUM cap;
+    TC2_ADD_REM_ENUM add_rem;
 };
 // TC2_MESSAGE_STYLE_ENUM TC2_MSG_CAPABILITY_STYLE = FIXED;
 

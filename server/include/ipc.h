@@ -31,7 +31,8 @@ typedef enum IPC_MESSAGE {
     IPC_NULL, // No message, for marking empty regions
     IPC_INIT,
     IPC_DISCONNECT,
-    IPC_PING
+    IPC_PING,
+    IPC_CLIENT_INFO
 } IPC_MESSAGE;
 
 #define MAX_CAPS 100
@@ -39,6 +40,7 @@ typedef enum IPC_MESSAGE {
 struct client_info {
     uint64_t ipc_id;
     // Want to also have some sort of client generated UUID
+    uint32_t num_caps;
     TC2_CAPABILITY_ENUM capabilities[MAX_CAPS];
 };
 
@@ -50,7 +52,7 @@ struct ping_message {
     char data[16];
 };
 
-struct message {
+struct message {    
     uint64_t client_id;
     bool fragmented;
     bool fragment_end;
@@ -59,6 +61,7 @@ struct message {
         struct empty_message init_message;
         struct empty_message disconnect_message;
         struct ping_message ping_message;
+        struct client_info client_info_message;
     };
 };
 // Enforce that the max size of message is below the hardcoded max
