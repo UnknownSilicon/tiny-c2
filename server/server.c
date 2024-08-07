@@ -209,7 +209,7 @@ void start_server(in_addr_t* host, short port, struct message_queues* i_map) {
         fflush(stdout);
 
         // Start handler
-        handle(connfs, curr_id, i_map);
+        handle(connfs, curr_id, i_map, ctx);
 
         // When handler exits, send disconnect message
         close(connfs);

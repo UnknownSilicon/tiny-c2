@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include "aes.h"
 #include "handler.h"
 #include "msg_reader.h"
 #include "ipc.h"
@@ -64,7 +65,7 @@ void read_and_handle_messages(uint64_t this_client, struct message_queues* i_map
     }
 }
 
-void handle(int sock, uint64_t client_id, struct message_queues* m_queue) {
+void handle(int sock, uint64_t client_id, struct message_queues* m_queue, struct AES_ctx* ctx) {
     printf("Starting handler for client %ld\n", client_id);
 
     // Keep track of client info here, send a copy to the CLI when it updates
@@ -83,12 +84,15 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue) {
     TC2_MESSAGE_TYPE_ENUM arr_type;
 
     struct tc2_msg_preamble preamble;
-    size_t bytes_left = sizeof(preamble);
+    size_t paddded_size = sizeof(preamble) + (sizeof(preamble) % AES_BLOCKLEN);
+    size_t bytes_left = paddded_size;
+    char* temp_preamble_buffer = malloc(paddded_size);
+
     while (1) {
         read_and_handle_messages(client_id, m_queue);
 
         // Non-blocking read preamble, then message
-        int val = read(sock, ((void*)&preamble) + (sizeof(preamble) - bytes_left), bytes_left);
+        int val = read(sock, ((void*)temp_preamble_buffer) + (paddded_size - bytes_left), bytes_left);
 
         // TODO: This will not always be how this is handled. In the future, we want to continue listening for the same client to reconnect.
         // This is mostly done on the cli/api side of things. We just want to retain client info even after it disconnects and if
@@ -97,6 +101,7 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue) {
             if (errno != EAGAIN) {
                 // Error
                 printf("Error while reading socket for client %ld. Errno %d\n", client_id, errno);
+                free(temp_preamble_buffer);
                 return;
             }
             // Non-blocking
@@ -104,6 +109,7 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue) {
         } else if (val == 0) {
             // EOF
             printf("Client disconnected\n");
+            free(temp_preamble_buffer);
             return;
         }
 
@@ -111,6 +117,17 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue) {
 
         if (bytes_left == 0) {
             // Full preamble read, handle it.
+
+            // TODO: Add tiny-HMAC to verify that packets were decrypted successfully?
+            // Decrypt and copy over preamble
+            AES_CBC_decrypt_buffer(ctx, temp_preamble_buffer, paddded_size);
+            memcpy(&preamble, temp_preamble_buffer, sizeof(preamble));
+
+            // Clean up and prep for next preamble
+            free(temp_preamble_buffer);
+            temp_preamble_buffer = malloc(paddded_size);
+            bytes_left = paddded_size;
+            
 
             size_t expected_len = 0;
 
@@ -132,22 +149,25 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue) {
             }
 
             // Read the actual message, non-blocking
-            void* message = malloc(expected_len);
-            size_t msg_bytes_left = expected_len;
+            size_t paddded_msg_size = expected_len + (expected_len % AES_BLOCKLEN);
+            void* temp_msg_buffer = malloc(paddded_msg_size);
+            size_t msg_bytes_left = paddded_msg_size;
 
             while (1) {
                 // Probably want to time out somehow too
-                int num_read = read(sock, message + (expected_len - msg_bytes_left), msg_bytes_left);
+                int num_read = read(sock, temp_msg_buffer + (paddded_msg_size - msg_bytes_left), msg_bytes_left);
 
                 if (num_read == -1) {
                     // Error
                     printf("Error while reading socket for client %ld\n", client_id);
-                    free(message);
+                    free(temp_msg_buffer);
+                    free(temp_preamble_buffer);
                     return;
                 } else if (num_read == 0) {
                     // EOF
                     printf("Client disconnected\n");
-                    free(message);
+                    free(temp_msg_buffer);
+                    free(temp_preamble_buffer);
                     return;
                 }
 
@@ -159,6 +179,10 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue) {
             }
 
             // Message read. Parse
+            void* message = malloc(expected_len);
+            AES_CBC_decrypt_buffer(ctx, temp_msg_buffer, paddded_msg_size);
+            memcpy(message, temp_msg_buffer, expected_len);
+            free(temp_msg_buffer);
 
             if (preamble.type == ARRAY) {
                 if (reading_array) {
