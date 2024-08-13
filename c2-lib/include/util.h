@@ -1,4 +1,8 @@
+#ifndef UTIL_H
+#define UTIL_H 1
 #include <stdint.h>
+
+#define DEBUG 1
 
 // ANSI escape sequences for color
 #define RED   "\x1B[31m"
@@ -20,8 +24,8 @@ int set_timeout(int sock, struct timeval *timeout);
 
 #define SIZEOF_ARR(arr) (sizeof(arr) / sizeof(*arr))
 
-// Generate `size` random bytes with malloc. Remember to free!
-uint8_t* rand_bytes(ssize_t size);
+// Generate `size` random bytes with malloc
+void rand_bytes(uint8_t loc[], size_t size);
 
 
 // Linked List
@@ -31,3 +35,4 @@ struct ll_node {
     struct ll_node* forward;
     void* data;  
 };
+#endif

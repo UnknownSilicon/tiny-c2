@@ -1,6 +1,6 @@
 
 
-add_executable(linux-client main.c)
+add_executable(linux-client main.c messaging.c)
 
 target_include_directories(linux-client PUBLIC "./include" "../c2-lib/include")
 

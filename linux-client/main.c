@@ -11,7 +11,12 @@
 #include "aes.h"
 #include "capabilities.h"
 #include "messages.h"
+#include "messaging.h"
 #include "util.h"
+
+#ifdef DEBUG
+#include <errno.h>
+#endif
 
 // TODO: Dynamically generate this based on compiler flags, adding in capability files as needed
 TC2_CAPABILITY_ENUM capabilities[] = { SYSTEM };
@@ -35,7 +40,8 @@ int main(int argc, char* argv[]) {
     // Encrypt ID with key
     struct AES_ctx ctx;
 
-    uint8_t* iv = rand_bytes(16);
+    uint8_t* iv = malloc(16);
+    rand_bytes(iv, 16);
 
     uint8_t key[] = AES_KEY;
 
@@ -56,9 +62,37 @@ int main(int argc, char* argv[]) {
     write(sock, &preamble, sizeof(preamble));
     write(sock, &init_msg, sizeof(init_msg));
 
+    struct tc2_array cap_arr;
+    cap_arr.type = CAPABILITY;
+    cap_arr.num_elements = NUM_CAPS;
+
+    preamble.type = ARRAY;
+    preamble.len = sizeof(cap_arr);
+
+    write_encrypted_padded(sock, &ctx, &preamble, sizeof(preamble));
+    write_encrypted_padded(sock, &ctx, &cap_arr, sizeof(cap_arr));
+
+    preamble.type = CAPABILITY;
+    preamble.len = sizeof(struct tc2_capability);
+
+    for (int c=0; c < NUM_CAPS; c++) {
+        struct tc2_capability cap;
+        cap.add_rem = ADD;
+        cap.cap = capabilities[c];
+
+        write_encrypted_padded(sock, &ctx, &preamble, sizeof(preamble));
+        write_encrypted_padded(sock, &ctx, &cap, sizeof(cap));
+    }
+
+    struct tc2_array_stop arr_stop;
+    preamble.type = ARRAY_STOP;
+    preamble.len = sizeof(arr_stop);
+    write_encrypted_padded(sock, &ctx, &preamble, sizeof(preamble));
+    write_encrypted_padded(sock, &ctx, &arr_stop, sizeof(arr_stop));
+
+
     char data[16];
     fgets(data, 8, stdin);
-    write(sock, "1", 1);
 
     sleep(10);
 
