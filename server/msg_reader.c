@@ -153,16 +153,20 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue, struct
             void* temp_msg_buffer = malloc(paddded_msg_size);
             size_t msg_bytes_left = paddded_msg_size;
 
-            while (1) {
+            while (msg_bytes_left > 0) {
                 // Probably want to time out somehow too
                 int num_read = read(sock, temp_msg_buffer + (paddded_msg_size - msg_bytes_left), msg_bytes_left);
 
                 if (num_read == -1) {
-                    // Error
-                    printf("Error while reading socket for client %ld\n", client_id);
-                    free(temp_msg_buffer);
-                    free(temp_preamble_buffer);
-                    return;
+                    if (errno != EAGAIN) {
+                        // Error
+                        printf("Error while reading socket for client %ld. Errno %d\n", client_id, errno);
+                        free(temp_msg_buffer);
+                        free(temp_preamble_buffer);
+                        return;
+                    }
+                    // Non-blocking
+                    continue;
                 } else if (num_read == 0) {
                     // EOF
                     printf("Client disconnected\n");
@@ -172,10 +176,6 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue, struct
                 }
 
                 msg_bytes_left -= num_read;
-
-                if (msg_bytes_left == 0) {
-                    break;
-                }
             }
 
             // Message read. Parse
