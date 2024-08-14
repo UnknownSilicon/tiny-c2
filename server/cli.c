@@ -16,12 +16,50 @@ static const char *HELP_TEXT =  MAG "Commands:\n" RESET
                                 "list - List connected C2 clients\n"
                                 "ping handler_id - Ping the internal client's handler for debugging\n"
                                 "session handler_id - Set the provided handler as the current handler for other commands\n"
+                                "capabilities - List the capabilities of the selectec handler\n"
+                                "caps - Short hand for capabilities\n"
                                 "\n";
 
 int str_eq(char* part, const char* literal) {
     size_t len = strlen(literal);
 
     return strncmp(part, literal, len) == 0;
+}
+
+// Returns NULL if client not found
+struct ll_node* find_client(struct ll_node* root, uint64_t client_id) {
+
+    if (root == NULL) {
+        printf(RED "Root is null when finding client!\n" RESET);
+        exit(1);
+    }
+
+    struct ll_node* next_node = root->forward;
+
+    if (next_node == NULL) {
+        printf(RED "Something broke! next_node is NULL\n" RESET);
+        exit(1);
+    }
+
+    bool found_client = false;
+    struct client_info* client_info = NULL;
+
+    while (next_node->data != NULL) {
+        client_info = (struct client_info*) next_node->data;
+    
+        if (client_info->ipc_id == client_id) {
+            return next_node;
+        }
+
+        next_node = next_node->forward;
+        
+        if (next_node == NULL) {
+            printf(RED "Something broke! next_node is NULL\n" RESET);
+            exit(1);
+        }
+    }
+
+    return NULL;
 }
 
 void parse_and_call(struct message_queues* i_map, char* input, struct ll_node* conn_root, struct client_info **selected_session) {
@@ -83,27 +121,9 @@ void parse_and_call(struct message_queues* i_map, char* input, struct ll_node* c
 
         // Check if client exists.
 
-        struct ll_node* next_node = conn_root->forward;
+        struct ll_node* node = find_client(conn_root, ul);
 
-        if (next_node == NULL) {
-            printf(RED "Something broke! next_node is NULL" RESET);
-            exit(1);
-        }
-
-        bool found_client = false;
-
-        while (next_node->data != NULL) {
-            struct client_info* client_info = (struct client_info*) next_node->data;
-        
-            if (client_info->ipc_id == ul) {
-                found_client = true;
-                break;
-            }
-
-            next_node = next_node->forward;
-        }
-
-        if (!found_client) {
+        if (node == NULL) { 
             printf(RED "Could not find client %ld\n" RESET, ul);
             return;
         }
@@ -140,31 +160,14 @@ void parse_and_call(struct message_queues* i_map, char* input, struct ll_node* c
 
         // Check if client exists.
 
-        struct ll_node* next_node = conn_root->forward;
+        struct ll_node* node = find_client(conn_root, ul);
 
-        if (next_node == NULL) {
-            printf(RED "Something broke! next_node is NULL" RESET);
-            exit(1);
-        }
-
-        bool found_client = false;
-        struct client_info* client_info = NULL;
-
-        while (next_node->data != NULL) {
-            client_info = (struct client_info*) next_node->data;
-        
-            if (client_info->ipc_id == ul) {
-                found_client = true;
-                break;
-            }
-
-            next_node = next_node->forward;
-        }
-
-        if (!found_client) {
+        if (node == NULL) {
             printf(RED "Could not find client %ld\n" RESET, ul);
             return;
         }
+
+        struct client_info* client_info = (struct client_info*) node->data;
 
         if (client_info == NULL) {
             printf(RED "Something broke! client_info is NULL\n" RESET);
@@ -174,6 +177,23 @@ void parse_and_call(struct message_queues* i_map, char* input, struct ll_node* c
         *selected_session = client_info;
 
         printf(GRN "Selected client %ld\n" RESET, ul);
+    } else if (str_eq(tok, "caps") || str_eq(tok, "capabilities")) {
+        struct client_info* curr_client = *selected_session;
+
+        if (curr_client == NULL) {
+            printf(YEL "No session selected. Use" BLU " session " YEL "to select\n" RESET);
+            return;
+        }
+
+        printf(GRN "Client Capabilities:\n" RESET);
+
+        for (int c=0; c<curr_client->num_caps; c++) {
+            TC2_CAPABILITY_ENUM cap = curr_client->capabilities[c];
+
+            printf("%s\n", CAPABILITY_STRING[cap]);
+        }
+
+        printf("\n");
     } else {
         printf(RED "Unknown command\n" RESET);
     }
@@ -242,7 +262,7 @@ void start_cli(struct message_queues* i_map) {
                 if (type == IPC_INIT) {
                     // Add connection to list
 
-                    // Check if client ID is already connected. Idk if it's realistically easy to kill that new connection though.
+                    // TODO: Check if client ID is already connected. Idk if it's realistically easy to kill that new connection though.
                     struct ll_node* new_node = malloc(sizeof (struct ll_node));
                     new_node->backward = head;
                     struct ll_node* next = head->forward;
@@ -260,44 +280,54 @@ void start_cli(struct message_queues* i_map) {
                 } else if (type == IPC_DISCONNECT) {
                     // Client disconnected, remove from linked list
 
-                    struct ll_node* next_node = root->forward;
+                    struct ll_node* node = find_client(root, client_id);
 
-                    if (next_node == NULL) {
-                        printf(RED "Something broke! next_node is NULL" RESET);
-                        exit(1);
-                    }
-
-                    bool found_client = false;
-
-                    while (next_node->data != NULL) {
-                        struct client_info* client_info = (struct client_info*) next_node->data;
-                    
-                        if (client_info->ipc_id == client_id) {
-                            found_client = true;
-                            // Unlink list
-                            if (next_node == head) {
-                                head = next_node->backward;
-                            }
-                            next_node->backward->forward = next_node->forward;
-                            next_node->forward->backward = next_node->backward;
-
-                            if (selected_session == client_info) {
-                                selected_session = NULL;
-                            }
-
-                            free(client_info);
-                            free(next_node);
-                            break;
-                        }
-
-                        next_node = next_node->forward;
-                    }
-
-                    if (found_client) {
-                        printf(YEL "Client %ld disconnected\n" RESET, client_id);
-                    } else {
+                    if (node == NULL) {
                         printf(RED "Could not find client %ld to disconnect\n" RESET, client_id);
+                        continue;
                     }
+
+                    struct client_info* client_info = (struct client_info*) node->data;
+
+                    if (node == head) {
+                        head = node->backward;
+                    }
+
+                    node->backward->forward = node->forward;
+                    node->forward->backward = node->backward;
+
+                    if (selected_session == client_info) {
+                        selected_session = NULL;
+                    }
+
+                    free(client_info);
+                    free(node);
+
+                    printf(YEL "Client %ld disconnected\n" RESET, client_id);
+
+                } else if (type == IPC_CLIENT_INFO) {
+                    struct client_info* client_info_msg = &message->client_info_message;
+
+                    if (client_info_msg == NULL) {
+                        printf(RED "Client info is null!\n" RESET);
+                        continue;
+                    }
+
+                    // Find client in Linked List
+                    struct ll_node* node = find_client(root, client_id);
+
+                    if (node == NULL) {
+                        printf(RED "Could not find client %ld\n" RESET, client_id);
+                        continue;
+                    }
+
+                    // Update client info
+
+                    struct client_info* current_info = (struct client_info*) node->data;
+
+                    memcpy(current_info, client_info_msg, sizeof(struct client_info));
+
+                    printf(GRN "Updated client info for %ld\n" RESET, client_id);
                 } else {
                     printf(RED "Unknown message type %d\n" RESET, (int)type);
                 }

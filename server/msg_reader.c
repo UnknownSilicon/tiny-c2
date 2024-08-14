@@ -120,7 +120,7 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue, struct
 
             // TODO: Add tiny-HMAC to verify that packets were decrypted successfully?
             // Decrypt and copy over preamble
-            AES_CBC_decrypt_buffer(ctx, temp_preamble_buffer, paddded_size);
+            AES_CBC_decrypt_buffer(ctx, (uint8_t*) temp_preamble_buffer, paddded_size);
             memcpy(&preamble, temp_preamble_buffer, sizeof(preamble));
 
             // Clean up and prep for next preamble
