@@ -2,6 +2,13 @@
 #include <stdio.h>
 #include <string.h>
 #include "ipc.h"
+#include "util.h"
+
+// Global sequence counter
+// Yes, this works with the multiprocessing
+// No, this won't overflow
+// Even if it was incremented every CPU cycle, it will take several million years to overflow
+uint64_t next_seq = 0;
 
 void ipc_send_message_up_blocking(struct message_queues *queues, struct message *message) {
     int i = 0;
@@ -93,5 +100,64 @@ void ipc_send_message_down_blocking(struct message_queues *queues, struct messag
         // Release semaphore and exit
         sem_post(&queue->sem);
         return;
+    }
+}
+
+// I'm sorry for this...
+void ipc_send_dynamic_message_down_blocking(struct message_queues *queues, uint64_t client_id, IPC_MESSAGE type, void* full_data, uint64_t data_len) {
+    // Here, I need to construct individual messages containing the info needed
+    struct message message;
+    message.client_id = client_id;
+    message.fragmented = true;
+    message.fragment_end = false;
+    message.total_size = data_len;
+    message.type = type;
+
+    uint16_t num_messages;
+    uint16_t last_size;
+    uint32_t block_len;
+
+    if (type == IPC_SYSTEM) {
+        block_len = (sizeof (struct system_message));
+        last_size = data_len % block_len;
+        num_messages = (data_len - last_size) / block_len;
+    } else {
+        printf(RED "Cannot send type %d as dynamic sized\n" RESET, type);
+        return;
+    }
+
+    for (int i=0; i<num_messages; i++) {
+        void* data_loc = full_data + (block_len * i);
+
+        message.seq = next_seq++;
+        if (last_size == 0 && i == num_messages-1) {
+            message.fragment_end = true;
+        }
+        
+        if (type == IPC_SYSTEM) {
+            memcpy(&message.system_message, data_loc, block_len);
+        } else {
+            printf(RED "Cannot send type %d as dynamic sized\n" RESET, type);
+            return;
+        }
+
+        ipc_send_message_down_blocking(queues, &message);
+    }
+
+    if (last_size > 0) {
+        // Send final message
+        message.fragment_end = true;
+        message.seq = next_seq++;
+
+        void* data_loc = full_data + (block_len * num_messages);
+
+        if (type == IPC_SYSTEM) {
+            memcpy(&message.system_message, data_loc, last_size);
+        } else {
+            printf(RED "Cannot send type %d as dynamic sized\n" RESET, type);
+            return;
+        }
+
+        ipc_send_message_down_blocking(queues, &message);
     }
 }

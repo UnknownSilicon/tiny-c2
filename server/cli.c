@@ -16,8 +16,9 @@ static const char *HELP_TEXT =  MAG "Commands:\n" RESET
                                 "list - List connected C2 clients\n"
                                 "ping handler_id - Ping the internal client's handler for debugging\n"
                                 "session handler_id - Set the provided handler as the current handler for other commands\n"
-                                "capabilities - List the capabilities of the selectec handler\n"
+                                "capabilities - List the capabilities of the selected handler\n"
                                 "caps - Short hand for capabilities\n"
+                                "system command - Send a command to the selected handler"
                                 "\n";
 
 int str_eq(char* part, const char* literal) {
@@ -194,6 +195,25 @@ void parse_and_call(struct message_queues* i_map, char* input, struct ll_node* c
         }
 
         printf("\n");
+    } else if (str_eq(tok, "system")) {
+        struct client_info* curr_client = *selected_session;
+
+        if (curr_client == NULL) {
+            printf(YEL "No session selected. Use" BLU " session " YEL "to select\n" RESET);
+            return;
+        }
+
+        tok = strtok_r(NULL, "\n", &saveptr);
+
+        if (tok == NULL) {
+            printf(RED "Missing parameter <command>\n" RESET);
+            return;
+        }
+
+        // tok is command. Send to client
+
+        
+        
     } else {
         printf(RED "Unknown command\n" RESET);
     }

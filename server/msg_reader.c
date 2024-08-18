@@ -131,12 +131,12 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue, struct
 
             size_t expected_len = 0;
 
-            if (preamble.type == ARRAY) {
+            if (preamble.type == MSG_ARRAY) {
                 // Handle starting array
                 expected_len = sizeof(struct tc2_array);
-            } else if (preamble.type == ARRAY_STOP) {
+            } else if (preamble.type == MSG_ARRAY_STOP) {
                 expected_len = sizeof(struct tc2_array_stop);
-            } else if (preamble.type == CAPABILITY) {
+            } else if (preamble.type == MSG_CAPABILITY) {
                 expected_len = sizeof(struct tc2_capability);
             } else {
                 printf("Cannot handle message type %d\n", preamble.type);
@@ -184,7 +184,7 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue, struct
             memcpy(message, temp_msg_buffer, expected_len);
             free(temp_msg_buffer);
 
-            if (preamble.type == ARRAY) {
+            if (preamble.type == MSG_ARRAY) {
                 if (reading_array) {
                     printf("Error. Already reading array\n");
                     goto clean;
@@ -198,7 +198,7 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue, struct
                 // Since types are compile time in C, there's no clean way to do this afaik
 
 //----------------- Array Types ------------------
-                if (type == CAPABILITY) {
+                if (type == MSG_CAPABILITY) {
                     msg_size = sizeof(struct tc2_capability);
                 } else {
                     printf("Cannot create an array of type %d\n", type);
@@ -222,7 +222,7 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue, struct
                 array_size = msg_arr->num_elements;
 
                 printf("Array Started\n");
-            } else if (preamble.type == ARRAY_STOP) {
+            } else if (preamble.type == MSG_ARRAY_STOP) {
                 struct tc2_array_stop *msg_arr_stop = (struct tc2_array_stop *)message;
 
                 if (!reading_array) {
@@ -233,7 +233,7 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue, struct
                 reading_array = false;
 
 //----------------- Array Types ------------------
-                if (arr_type == CAPABILITY) {
+                if (arr_type == MSG_CAPABILITY) {
                     handle_arr_capability(sock, client_id, m_queue, &info,(struct tc2_capability *) working_arr, arr_index);
                 } else {
                     printf("Cannot handle array of type %d. Something went wrong!\n", arr_type);
@@ -242,12 +242,12 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue, struct
                 }
 
                 free(working_arr);                
-            } else if (preamble.type == CAPABILITY) {
+            } else if (preamble.type == MSG_CAPABILITY) {
                 struct tc2_capability *msg_cap = (struct tc2_capability *)message;
 
                 if (reading_array) {
-                    if (arr_type != CAPABILITY) {
-                        printf("Array type not CAPABILITY. Is %d\n", arr_type);
+                    if (arr_type != MSG_CAPABILITY) {
+                        printf("Array type not MSG_CAPABILITY. Is %d\n", arr_type);
                         goto clean;
                     }
 

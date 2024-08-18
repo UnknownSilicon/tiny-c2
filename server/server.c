@@ -116,14 +116,14 @@ void start_server(in_addr_t* host, short port, struct message_queues* i_map) {
 
         printf("Received preamble. Type %d\n", preamble.type);
 
-        if (preamble.type != INIT) {
+        if (preamble.type != MSG_INIT) {
             printf("Received unexpected type. Closing...\n");
             close(connfs);
             continue;
         }
 
         if (preamble.len != sizeof(struct tc2_msg_init)) {
-            printf("Received unexpected message length. INIT is Fixed message length of %ld, but got %d\n", sizeof(struct tc2_msg_init), preamble.len);
+            printf("Received unexpected message length. MSG_INIT is Fixed message length of %ld, but got %d\n", sizeof(struct tc2_msg_init), preamble.len);
             close(connfs);
             continue;
         }

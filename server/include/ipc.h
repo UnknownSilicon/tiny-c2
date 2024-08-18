@@ -4,6 +4,10 @@
 #include "cassert.h"
 #include "capabilities.h"
 
+
+// FIXME: I frankly wish I just used sockets here and dealt with blocking
+// Sockets make dynamic sized messages so much easier.
+
 #ifndef IPC_H
 #define IPC_H
 
@@ -32,7 +36,8 @@ typedef enum IPC_MESSAGE {
     IPC_INIT,
     IPC_DISCONNECT,
     IPC_PING,
-    IPC_CLIENT_INFO
+    IPC_CLIENT_INFO,
+    IPC_SYSTEM
 } IPC_MESSAGE;
 
 #define MAX_CAPS 100
@@ -52,16 +57,23 @@ struct ping_message {
     char data[16];
 };
 
+struct system_message {
+    char data[128]; // Idk this is arbitrary lol
+};
+
 struct message {    
     uint64_t client_id;
     bool fragmented;
     bool fragment_end;
+    uint64_t seq; // seq and total_size are only used if fragmented is true
+    uint64_t total_size;
     IPC_MESSAGE type;
     union {
         struct empty_message init_message;
         struct empty_message disconnect_message;
         struct ping_message ping_message;
         struct client_info client_info_message;
+        struct system_message system_message;
     };
 };
 // Enforce that the max size of message is below the hardcoded max
@@ -87,6 +99,6 @@ struct message_queues {
 void ipc_send_message_up_blocking(struct message_queues *queues, struct message *message);
 void ipc_send_message_down_blocking(struct message_queues *queues, struct message *message);
 
-
+void ipc_send_dynamic_message_down_blocking(struct message_queues *queues, uint64_t client_id, IPC_MESSAGE type, void* full_data, uint64_t data_len);
 
 #endif
