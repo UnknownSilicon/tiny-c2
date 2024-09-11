@@ -63,6 +63,20 @@ struct ll_node* find_client(struct ll_node* root, uint64_t client_id) {
     return NULL;
 }
 
+bool has_capability(struct client_info* client_info, TC2_CAPABILITY_ENUM cap) {
+    if (client_info == NULL) {
+        return false;
+    }
+
+    for (int i=0; i<client_info->num_caps; i++) {
+        if (client_info->capabilities[i] == cap) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void parse_and_call(struct message_queues* i_map, char* input, struct ll_node* conn_root, struct client_info **selected_session) {
     char* saveptr;
     char* tok = strtok_r(input, " \n", &saveptr);
@@ -201,6 +215,11 @@ void parse_and_call(struct message_queues* i_map, char* input, struct ll_node* c
 
         if (curr_client == NULL) {
             printf(YEL "No session selected. Use" BLU " session " YEL "to select\n" RESET);
+            return;
+        }
+
+        if (!has_capability(curr_client, CAP_SYSTEM)) {
+            printf(RED "Client does not have CAP_SYSTEM capability\n" RESET);
             return;
         }
 
