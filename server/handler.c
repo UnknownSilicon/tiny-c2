@@ -61,7 +61,6 @@ void handle_arr_capability(int sock, uint64_t client_id, struct message_queues* 
         struct message msg;
         msg.client_id = client_id;
         msg.fragmented = false;
-        msg.fragment_end = false;
         msg.type = IPC_CLIENT_INFO;
         memcpy(&msg.client_info_message, info, sizeof(struct client_info));
 
@@ -112,7 +111,6 @@ void handle_capability(int sock, uint64_t client_id, struct message_queues* m_qu
     struct message msg;
     msg.client_id = client_id;
     msg.fragmented = false;
-    msg.fragment_end = false;
     msg.type = IPC_CLIENT_INFO;
     memcpy(&msg.client_info_message, info, sizeof(struct client_info));
 

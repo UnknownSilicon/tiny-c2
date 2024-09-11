@@ -110,7 +110,6 @@ void ipc_send_dynamic_message_down_blocking(struct message_queues *queues, uint6
     message.client_id = client_id;
     message.fragment_start = true;
     message.fragmented = true;
-    message.fragment_end = false;
     message.total_size = data_len;
     message.type = type;
 
@@ -119,7 +118,7 @@ void ipc_send_dynamic_message_down_blocking(struct message_queues *queues, uint6
     uint32_t block_len;
 
     if (type == IPC_SYSTEM) {
-        block_len = (sizeof (struct system_message));
+        block_len = (sizeof (struct dynamic_part));
         last_size = data_len % block_len;
         num_messages = (data_len - last_size) / block_len;
     } else {
@@ -131,12 +130,9 @@ void ipc_send_dynamic_message_down_blocking(struct message_queues *queues, uint6
         void* data_loc = full_data + (block_len * i);
 
         message.seq = next_seq++;
-        if (last_size == 0 && i == num_messages-1) {
-            message.fragment_end = true;
-        }
         
         if (type == IPC_SYSTEM) {
-            memcpy(&message.system_message, data_loc, block_len);
+            memcpy(&message.dynamic_part, data_loc, block_len);
         } else {
             printf(RED "Cannot send type %d as dynamic sized\n" RESET, type);
             return;
@@ -148,13 +144,12 @@ void ipc_send_dynamic_message_down_blocking(struct message_queues *queues, uint6
 
     if (last_size > 0) {
         // Send final message
-        message.fragment_end = true;
         message.seq = next_seq++;
 
         void* data_loc = full_data + (block_len * num_messages);
 
         if (type == IPC_SYSTEM) {
-            memcpy(&message.system_message, data_loc, last_size);
+            memcpy(&message.dynamic_part, data_loc, last_size);
         } else {
             printf(RED "Cannot send type %d as dynamic sized\n" RESET, type);
             return;

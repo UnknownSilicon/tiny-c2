@@ -199,7 +199,6 @@ void start_server(in_addr_t* host, short port, struct message_queues* i_map) {
         struct message message;
         message.client_id = curr_id;
         message.fragmented = false;
-        message.fragment_end = false;
         message.type = IPC_INIT;
         message.init_message = init_message;
 
@@ -220,7 +219,6 @@ void start_server(in_addr_t* host, short port, struct message_queues* i_map) {
         struct message dc_message;
         dc_message.client_id = curr_id;
         dc_message.fragmented = false;
-        dc_message.fragment_end = false;
         dc_message.type = IPC_DISCONNECT;
         dc_message.disconnect_message = dc_message_empty;
 

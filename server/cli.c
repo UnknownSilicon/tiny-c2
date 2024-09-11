@@ -272,7 +272,7 @@ void start_cli(struct message_queues* i_map) {
             for (int m=0; m<temp_num; m++) {
                 struct message* message = &message_temp[m];
 
-                if (message->fragmented || message->fragment_end) {
+                if (message->fragmented) {
                     printf(RED "Fragmentation not yet implemented!\n" RESET);
                     continue;
                 }
