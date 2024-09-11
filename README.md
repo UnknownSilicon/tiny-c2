@@ -48,3 +48,9 @@ The server takes two options:
 As of 8/10/2024, the client is designed to connect only to `127.0.0.1:1234` for testing.
 
 After connecting, you can interact with clients through the server's CLI. Run `help` to see commands.
+
+
+# Goals:
+
+- Convert TCP sockets into non-constant connection
+  - Keep state on the server, client only connects when it wants to send info
