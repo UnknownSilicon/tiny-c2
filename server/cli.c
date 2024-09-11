@@ -135,8 +135,9 @@ void parse_and_call(struct message_queues* i_map, char* input, struct ll_node* c
 
         struct message message;
         message.client_id = ul;
+        message.fragment_start = false;
         message.fragmented = false;
-        message.fragment_end = false;
+        //message.fragment_end = false;
         message.type = IPC_PING;
         message.ping_message = ping_message;
 
@@ -234,7 +235,7 @@ void start_cli(struct message_queues* i_map) {
 
     struct message message_temp[QUEUE_SIZE];
 
-    char input[100];
+    char input[1024];
 
     while (1) {
 
@@ -244,7 +245,7 @@ void start_cli(struct message_queues* i_map) {
             printf(">> ");
         }
 
-        if (fgets(input, 100, stdin) == NULL) {
+        if (fgets(input, 1024, stdin) == NULL) {
             printf(RED "Error reading input.\n" RESET);
             continue;
         }

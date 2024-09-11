@@ -9,9 +9,101 @@
 #include "msg_reader.h"
 #include "ipc.h"
 #include "messages.h"
+#include "messaging.h"
 #include "util.h"
 
-void read_and_handle_messages(uint64_t this_client, struct message_queues* i_map) {
+size_t read_fragmented_message(uint64_t this_client, struct message_queues* i_map, struct message* start_message_copy, void* message_out, size_t message_size) {
+    
+    if (message_size <= sizeof(struct dynamic_part)) {
+        // Special case, copy the part and return
+        memcpy(&message_out, &start_message_copy->dynamic_part, message_size);
+        return message_size;
+    }
+
+    // Copy the first part
+    memcpy(&message_out, &start_message_copy->dynamic_part, sizeof(struct dynamic_part));
+
+    size_t bytes_left = message_size - sizeof(struct dynamic_part);
+    uint64_t prev_seq = start_message_copy->seq;
+
+    // Loop through queues to find parts
+
+    // TODO: Yes this is duplicated code sorry
+    // This is what I get for programming in C
+
+
+    // Loop through a few times just in case not everything was added
+    // TODO: This is implemented poorly and has an edge case if fragments are somehow ordered backwards
+    for (int a=0; a<MAX_FRAG_ATTEMPTS; a++) {
+        for (int i=0; i<NUM_DOWN_QUEUES; i++) {
+            struct masked_queue* queue = &i_map->down_queues[i];
+
+            // Lock queue and find relevant messages
+            sem_wait(&queue->sem);
+
+            for (int m=0; m<QUEUE_SIZE; m++) {
+                // Only test messages that exist
+                if (!TestBit(queue->bit_mask, m)) {
+                    continue;
+                }
+
+                struct message* message = &queue->messages[m];
+
+                if (message->client_id != this_client) {
+                    // Not this client's message. Ignore it
+                    continue;
+                }
+
+                if (!message->fragmented) {
+                    continue;
+                }
+
+                if (message->seq == prev_seq+1) {
+                    // This is the next message in the sequence, copy and mark as read
+
+                    size_t bytes_to_read = sizeof(struct dynamic_part);
+
+                    if (bytes_left < bytes_to_read) {
+                        bytes_to_read = bytes_left;
+                    }
+
+                    memcpy(message_out + (message_size-bytes_left), &message->dynamic_part, bytes_to_read);
+
+                    ClearBit(queue->bit_mask, m);
+
+                    prev_seq++;
+                    bytes_left -= bytes_to_read;
+                }
+
+                // All parts read!
+                if (bytes_left == 0) {
+                    sem_post(&queue->sem);
+                    return message_size;
+                }
+
+            }
+
+            sem_post(&queue->sem);
+        }
+    }
+    return message_size - bytes_left;
+}
+
+void handle_frag_message(int sock, uint64_t this_client, void *message, size_t message_size, IPC_MESSAGE type, struct AES_ctx* ctx) {
+
+    if (type == IPC_SYSTEM) {
+        struct tc2_msg_preamble preamble;
+        preamble.type = MSG_SYSTEM;
+        preamble.len = message_size;
+
+        write_encrypted_padded(sock, ctx, &preamble, sizeof(preamble));
+        write_encrypted_padded(sock, ctx, message, message_size);
+    } else {
+        printf("Unknown message type %d", (int) type);
+    }
+}
+
+void read_and_handle_messages(int sock, uint64_t this_client, struct message_queues* i_map, struct AES_ctx* ctx) {
     struct message message_temp[QUEUE_SIZE];
     int message_index = 0;
 
@@ -34,6 +126,42 @@ void read_and_handle_messages(uint64_t this_client, struct message_queues* i_map
                 continue;
             }
 
+            if (message->fragment_start) {
+                // Start reading fragmented message
+                size_t total_frag_size = message->total_size;
+
+                void* message_out = malloc(total_frag_size);
+
+                struct message message_copy;
+
+                memcpy(&message_copy, message, sizeof(struct message));
+
+                ClearBit(queue->bit_mask, m);
+                
+                sem_post(&queue->sem);
+
+                size_t bytes_read = read_fragmented_message(this_client, i_map, &message_copy, message_out, total_frag_size);
+
+                if (bytes_read < total_frag_size) {
+                    printf(RED "[-] Could not read all parts of fragmented message!\n" RESET);
+                    continue;
+                }
+
+                // Handle fragmented message
+                IPC_MESSAGE type = message_copy.type;
+                handle_frag_message(sock, this_client, message_out, total_frag_size, type, ctx);
+
+                free(message_out);
+
+                sem_wait(&queue->sem);
+
+                continue;
+            }
+           
+            if (message->fragmented) {
+                continue;
+            }
+
             // Copy message and clear from queue
             memcpy(&message_temp[message_index], message, sizeof(struct message));
 
@@ -48,11 +176,6 @@ void read_and_handle_messages(uint64_t this_client, struct message_queues* i_map
 
         for (int m_num=0; m_num<message_index; m_num++) {
             struct message* message = &message_temp[m_num];
-
-            if (message->fragmented || message->fragment_end) {
-                printf("Fragmentation not yet implemented!\n");
-                continue;
-            }
 
             IPC_MESSAGE type = message->type;
 
@@ -89,7 +212,7 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue, struct
     char* temp_preamble_buffer = malloc(paddded_size);
 
     while (1) {
-        read_and_handle_messages(client_id, m_queue);
+        read_and_handle_messages(sock, client_id, m_queue, ctx);
 
         // Non-blocking read preamble, then message
         int val = read(sock, ((void*)temp_preamble_buffer) + (paddded_size - bytes_left), bytes_left);

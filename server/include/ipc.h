@@ -57,23 +57,24 @@ struct ping_message {
     char data[16];
 };
 
-struct system_message {
+struct dynamic_part {
     char data[128]; // Idk this is arbitrary lol
 };
 
 struct message {    
     uint64_t client_id;
+    bool fragment_start;
     bool fragmented;
-    bool fragment_end;
+    //bool fragment_end;
     uint64_t seq; // seq and total_size are only used if fragmented is true
-    uint64_t total_size;
+    size_t total_size;
     IPC_MESSAGE type;
     union {
         struct empty_message init_message;
         struct empty_message disconnect_message;
         struct ping_message ping_message;
         struct client_info client_info_message;
-        struct system_message system_message;
+        struct dynamic_part dynamic_part;
     };
 };
 // Enforce that the max size of message is below the hardcoded max

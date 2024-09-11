@@ -57,23 +57,23 @@ int main(int argc, char* argv[]) {
     
 
     struct tc2_msg_preamble preamble;
-    preamble.type = INIT;
+    preamble.type = MSG_INIT;
     preamble.len = sizeof(init_msg);
 
     write(sock, &preamble, sizeof(preamble));
     write(sock, &init_msg, sizeof(init_msg));
 
     struct tc2_array cap_arr;
-    cap_arr.type = CAPABILITY;
+    cap_arr.type = MSG_CAPABILITY;
     cap_arr.num_elements = NUM_CAPS;
 
-    preamble.type = ARRAY;
+    preamble.type = MSG_ARRAY;
     preamble.len = sizeof(cap_arr);
 
     write_encrypted_padded(sock, &ctx, &preamble, sizeof(preamble));
     write_encrypted_padded(sock, &ctx, &cap_arr, sizeof(cap_arr));
 
-    preamble.type = CAPABILITY;
+    preamble.type = MSG_CAPABILITY;
     preamble.len = sizeof(struct tc2_capability);
 
     for (int c=0; c < NUM_CAPS; c++) {
@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
     }
 
     struct tc2_array_stop arr_stop;
-    preamble.type = ARRAY_STOP;
+    preamble.type = MSG_ARRAY_STOP;
     preamble.len = sizeof(arr_stop);
     write_encrypted_padded(sock, &ctx, &preamble, sizeof(preamble));
     write_encrypted_padded(sock, &ctx, &arr_stop, sizeof(arr_stop));

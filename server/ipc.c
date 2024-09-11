@@ -108,6 +108,7 @@ void ipc_send_dynamic_message_down_blocking(struct message_queues *queues, uint6
     // Here, I need to construct individual messages containing the info needed
     struct message message;
     message.client_id = client_id;
+    message.fragment_start = true;
     message.fragmented = true;
     message.fragment_end = false;
     message.total_size = data_len;
@@ -142,6 +143,7 @@ void ipc_send_dynamic_message_down_blocking(struct message_queues *queues, uint6
         }
 
         ipc_send_message_down_blocking(queues, &message);
+        message.fragment_start = false;
     }
 
     if (last_size > 0) {

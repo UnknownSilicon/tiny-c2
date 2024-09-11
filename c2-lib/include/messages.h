@@ -4,19 +4,6 @@
 
 #define PROTO_VER 1
 
-typedef enum TC2_MESSAGE_TYPE {
-    UNKNOWN,
-    INIT,
-    ARRAY,
-    ARRAY_STOP,
-    CAPABILITY
-} TC2_MESSAGE_TYPE_ENUM;
-
-typedef enum TC2_ADD_REM {
-    ADD,
-    REMOVE
-} TC2_ADD_REM_ENUM;
-
 /*
 FIXED messages represent a message with a fixed sized struct.
 These can always be read directly into a struct.
@@ -31,35 +18,62 @@ portion of the message into the relevant data.
 DYNAMIC messages SHOULD be used sparingly due to their room for error.
 
 DYNAMIC messages SHOULD NOT be used when there is a known number of fixed size structs.
-In this case, send an ARRAY message, followed by the number of elements.
-Then, send a ARRAY_STOP mesasge to finish it.
+In this case, send an MSG_ARRAY message, followed by the number of elements.
+Then, send a MSG_ARRAY_STOP mesasge to finish it.
 */
 typedef enum TC2_MESSAGE_STYLE {
     FIXED,
     DYNAMIC
 } TC2_MESSAGE_STYLE_ENUM;
 
+
+#define FOREACH_MESSAGE(MSG) \
+        MSG(MSG_UNKNOWN, FIXED)    \
+        MSG(MSG_INIT, FIXED)       \
+        MSG(MSG_ARRAY, FIXED)      \
+        MSG(MSG_ARRAY_STOP, FIXED) \
+        MSG(MSG_CAPABILITY, FIXED) \
+        MSG(MSG_SYSTEM, DYNAMIC)   \
+
+#define GENERATE_MSG_ENUM(ENUM, TYPE) ENUM,
+#define GENERATE_TYPES(ENUM, TYPE) TYPE,
+
+typedef enum TC2_MESSAGE_TYPE {
+    FOREACH_MESSAGE(GENERATE_MSG_ENUM)
+} TC2_MESSAGE_TYPE_ENUM;
+
+static const TC2_MESSAGE_STYLE_ENUM MESSAGE_TYPES[] = {
+    FOREACH_MESSAGE(GENERATE_TYPES)
+};
+
+
+typedef enum TC2_ADD_REM {
+    ADD,
+    REMOVE
+} TC2_ADD_REM_ENUM;
+
 struct tc2_msg_init {
     uint8_t iv[16];
     uint8_t enc_id[32];
 };
-// TC2_MESSAGE_STYLE_ENUM TC2_MSG_INIT_STYLE = FIXED;
 
 struct tc2_array {
     TC2_MESSAGE_TYPE_ENUM type;
     uint32_t num_elements;
 };
-// TC2_MESSAGE_STYLE_ENUM TC2_MSG_ARRAY_STYLE = FIXED;
 
 struct tc2_array_stop {
 };
-// TC2_MESSAGE_STYLE_ENUM TC2_MSG_ARRAY_STOP_STYLE = FIXED;
 
 struct tc2_capability {
     TC2_CAPABILITY_ENUM cap;
     TC2_ADD_REM_ENUM add_rem;
 };
-// TC2_MESSAGE_STYLE_ENUM TC2_MSG_CAPABILITY_STYLE = FIXED;
+
+// Dynamic
+struct tc2_system {
+
+};
 
 struct tc2_msg_preamble {
     TC2_MESSAGE_TYPE_ENUM type;
