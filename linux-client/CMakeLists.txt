@@ -1,6 +1,6 @@
 
 
-add_executable(linux-client main.c)
+add_executable(linux-client main.c caps.c)
 
 target_include_directories(linux-client PUBLIC "./include" "../c2-lib/include")
 

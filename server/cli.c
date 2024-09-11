@@ -231,9 +231,12 @@ void parse_and_call(struct message_queues* i_map, char* input, struct ll_node* c
         }
 
         // tok is command. Send to client
-
+        // Replace NULL terminator with a newline
+        size_t command_len = strlen(tok);
+        tok[command_len] = '\n';
         
-        
+        // Keep the null terminator
+        ipc_send_dynamic_message_down_blocking(i_map, curr_client->ipc_id, IPC_SYSTEM, tok, command_len + 1);
     } else {
         printf(RED "Unknown command\n" RESET);
     }
