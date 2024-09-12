@@ -207,7 +207,7 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue, struct
     TC2_MESSAGE_TYPE_ENUM arr_type;
 
     struct tc2_msg_preamble preamble;
-    size_t paddded_size = sizeof(preamble) + (sizeof(preamble) % AES_BLOCKLEN);
+    size_t paddded_size = sizeof(preamble) + AES_BLOCKLEN - (sizeof(preamble) % AES_BLOCKLEN);
     size_t bytes_left = paddded_size;
     char* temp_preamble_buffer = malloc(paddded_size);
 
@@ -272,7 +272,7 @@ void handle(int sock, uint64_t client_id, struct message_queues* m_queue, struct
             }
 
             // Read the actual message, non-blocking
-            size_t paddded_msg_size = expected_len + (expected_len % AES_BLOCKLEN);
+            size_t paddded_msg_size = expected_len + AES_BLOCKLEN - (expected_len % AES_BLOCKLEN);
             void* temp_msg_buffer = malloc(paddded_msg_size);
             size_t msg_bytes_left = paddded_msg_size;
 

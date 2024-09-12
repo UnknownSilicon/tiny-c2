@@ -25,7 +25,7 @@
 void read_handle_message(int sock, struct AES_ctx* ctx) {
 
     // Read preamble
-    size_t paddded_preamble_size = sizeof(struct tc2_msg_preamble) + (sizeof(struct tc2_msg_preamble) % AES_BLOCKLEN);
+    size_t paddded_preamble_size = sizeof(struct tc2_msg_preamble) + AES_BLOCKLEN - (sizeof(struct tc2_msg_preamble) % AES_BLOCKLEN);
     char* preamble_buffer = malloc(paddded_preamble_size);
 
     read(sock, preamble_buffer, paddded_preamble_size);
@@ -38,7 +38,7 @@ void read_handle_message(int sock, struct AES_ctx* ctx) {
     struct tc2_msg_preamble* preamble = (struct tc2_msg_preamble *) preamble_buffer;
 
     // Read message
-    size_t paddded_size = preamble->len + (preamble->len % AES_BLOCKLEN);
+    size_t paddded_size = preamble->len + AES_BLOCKLEN - (preamble->len % AES_BLOCKLEN);
     char* message_buffer = malloc(paddded_size);
 
     read(sock, message_buffer, paddded_size);

@@ -9,7 +9,7 @@
 #endif
 
 bool write_encrypted_padded(int sock, struct AES_ctx* ctx, void* data, size_t data_len) {
-    size_t padding_size = data_len % AES_BLOCKLEN;
+    size_t padding_size = AES_BLOCKLEN - (data_len % AES_BLOCKLEN);
     size_t total_size = data_len + padding_size;
 
     char* temp_data = malloc(total_size);
