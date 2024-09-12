@@ -16,12 +16,12 @@ size_t read_fragmented_message(uint64_t this_client, struct message_queues* i_ma
     
     if (message_size <= sizeof(struct dynamic_part)) {
         // Special case, copy the part and return
-        memcpy(&message_out, &start_message_copy->dynamic_part, message_size);
+        memcpy(message_out, &start_message_copy->dynamic_part, message_size);
         return message_size;
     }
 
     // Copy the first part
-    memcpy(&message_out, &start_message_copy->dynamic_part, sizeof(struct dynamic_part));
+    memcpy(message_out, &start_message_copy->dynamic_part, sizeof(struct dynamic_part));
 
     size_t bytes_left = message_size - sizeof(struct dynamic_part);
     uint64_t prev_seq = start_message_copy->seq;
