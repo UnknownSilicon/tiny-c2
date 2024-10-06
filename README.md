@@ -54,3 +54,16 @@ After connecting, you can interact with clients through the server's CLI. Run `h
 
 - Convert TCP sockets into non-constant connection
   - Keep state on the server, client only connects when it wants to send info
+  - This turns it into more of an actual C2 as opposed to a fancy reverse shell
+
+
+
+# Known Issues:
+
+- CLI
+  - Doesn't support arrows for selecting history
+- System Command
+  - Things such as a bash reverse shell don't work. Invalid FD
+    - This is due to the fact that input redirection is a bash feature
+    - To suport this, the client needs to find the current installed shell and pass that in
+    - Ex: `bash -c '<command>'`

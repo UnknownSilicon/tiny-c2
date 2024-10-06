@@ -1,0 +1,16 @@
+#ifndef CAPS_H
+#define CAPS_H 1
+
+#include "capabilities.h"
+#include <stdint.h>
+
+#define CAPS_LIST @CAPS_LIST_CMAKE@
+
+// TODO: Dynamically generate this based on compiler flags, adding in capability files as needed
+static const TC2_CAPABILITY_ENUM capabilities[] = { CAPS_LIST };
+#define NUM_CAPS (sizeof capabilities / sizeof capabilities[0])
+
+void handle_system(char* command);
+
+
+#endif

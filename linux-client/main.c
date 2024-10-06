@@ -21,6 +21,7 @@
 #endif
 
 
+
 // This needs to be made non-blocking eventually, but for now here it is
 void read_handle_message(int sock, struct AES_ctx* ctx) {
 
@@ -47,6 +48,7 @@ void read_handle_message(int sock, struct AES_ctx* ctx) {
 
     AES_CBC_decrypt_buffer(ctx, (uint8_t*) message_buffer, paddded_size);
 
+    // TODO: Dynamically create these statements
     if (preamble->type == MSG_SYSTEM) {
         handle_system(message_buffer);
 
@@ -58,10 +60,6 @@ void read_handle_message(int sock, struct AES_ctx* ctx) {
     free(message_buffer);
     free(preamble_buffer);
 }
-
-// TODO: Dynamically generate this based on compiler flags, adding in capability files as needed
-TC2_CAPABILITY_ENUM capabilities[] = { CAP_SYSTEM };
-uint32_t NUM_CAPS = 1;
 
 int main(int argc, char* argv[]) {
     srand(time(NULL));
